@@ -4,6 +4,11 @@ extends Node
 ## Each check returns a list of violation dicts. Empty = passed.
 
 var _checks: Dictionary = {}  # {name: Callable}
+var _adapter = null  # Optional project-specific adapter
+
+
+func set_adapter(adapter) -> void:
+	_adapter = adapter
 
 const MAX_VIOLATIONS: int = 20
 
@@ -72,6 +77,11 @@ func run(name: String) -> Dictionary:
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 func _get_alive() -> Array:
+	if _adapter != null:
+		# Prefer serialized dicts so invariant field names are project-independent
+		if _adapter.has_method("get_invariant_entities"):
+			return _adapter.get_invariant_entities()
+		return _adapter.get_alive_entities()
 	var mgr = get_node_or_null("/root/EntityManager")
 	if mgr == null:
 		return []
@@ -134,23 +144,24 @@ func _check_needs_bounded(entities: Array) -> Array:
 func _check_emotions_bounded(entities: Array) -> Array:
 	var violations: Array = []
 	for e in entities:
-		if not ("emotion_data" in e):
-			continue
-		var ed = e.emotion_data
-		if ed == null:
-			continue
+		# Prefer "emotions" dict (serialized form from adapter)
 		var emotions = null
-		if "primary_emotions" in ed:
-			emotions = ed.primary_emotions
-		elif typeof(ed) == TYPE_DICTIONARY:
-			emotions = ed
+		if "emotions" in e:
+			emotions = e.get("emotions") if typeof(e) == TYPE_DICTIONARY else e.emotions
+		elif "emotion_data" in e:
+			var ed = e.get("emotion_data") if typeof(e) == TYPE_DICTIONARY else e.emotion_data
+			if ed != null and "primary_emotions" in ed:
+				emotions = ed.primary_emotions
+			elif typeof(ed) == TYPE_DICTIONARY:
+				emotions = ed
 		if emotions == null or typeof(emotions) != TYPE_DICTIONARY:
 			continue
+		var eid = e.get("id") if typeof(e) == TYPE_DICTIONARY else e.id
 		for k in emotions:
 			var v = emotions[k]
 			if (typeof(v) == TYPE_FLOAT or typeof(v) == TYPE_INT) and (v < 0.0 or v > 1.0):
 				violations.append({
-					"entity_id": e.id,
+					"entity_id": eid,
 					"field": "emotions.%s" % k,
 					"value": v,
 					"expected": "[0.0, 1.0]",
@@ -161,23 +172,26 @@ func _check_emotions_bounded(entities: Array) -> Array:
 func _check_personality_bounded(entities: Array) -> Array:
 	var violations: Array = []
 	for e in entities:
-		if not ("personality_data" in e):
-			continue
-		var pd = e.personality_data
-		if pd == null:
-			continue
+		# Prefer "personality_axes" dict (serialized form from adapter)
 		var axes = null
-		if "axes" in pd:
-			axes = pd.axes
-		elif typeof(pd) == TYPE_DICTIONARY:
-			axes = pd
+		if "personality_axes" in e:
+			axes = e.get("personality_axes") if typeof(e) == TYPE_DICTIONARY else e.personality_axes
+		elif "personality_data" in e:
+			var pd = e.get("personality_data") if typeof(e) == TYPE_DICTIONARY else e.personality_data
+			if pd == null:
+				continue
+			if "axes" in pd:
+				axes = pd.axes
+			elif typeof(pd) == TYPE_DICTIONARY:
+				axes = pd
 		if axes == null or typeof(axes) != TYPE_DICTIONARY:
 			continue
+		var eid = e.get("id") if typeof(e) == TYPE_DICTIONARY else e.id
 		for k in axes:
 			var v = axes[k]
 			if (typeof(v) == TYPE_FLOAT or typeof(v) == TYPE_INT) and (v < 0.0 or v > 1.0):
 				violations.append({
-					"entity_id": e.id,
+					"entity_id": eid,
 					"field": "personality.%s" % k,
 					"value": v,
 					"expected": "[0.0, 1.0]",
@@ -234,12 +248,12 @@ func _check_no_duplicate_traits(entities: Array) -> Array:
 		if typeof(traits) != TYPE_ARRAY:
 			continue
 		var seen: Dictionary = {}
-		for trait in traits:
+		for t in traits:
 			var trait_id = null
-			if typeof(trait) == TYPE_DICTIONARY and "trait_id" in trait:
-				trait_id = trait["trait_id"]
-			elif typeof(trait) == TYPE_STRING or typeof(trait) == TYPE_INT:
-				trait_id = trait
+			if typeof(t) == TYPE_DICTIONARY and "trait_id" in t:
+				trait_id = t["trait_id"]
+			elif typeof(t) == TYPE_STRING or typeof(t) == TYPE_INT:
+				trait_id = t
 			if trait_id == null:
 				continue
 			if trait_id in seen:
