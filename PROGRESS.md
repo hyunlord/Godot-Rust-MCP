@@ -329,3 +329,28 @@ godot_start 호출 시 addon 자동 설치 + 마켓플레이스 등록으로 사
 - project.godot INI 파싱이 단순 문자열 치환이므로 극단적 edge case에서 깨질 수 있음
   (예: 주석 안에 [autoload]가 있는 경우 — 실제로는 거의 발생 안 함)
 - 기존 harness 파일이 있으면 업데이트 안 함 (의도적 — 사용자 수정 보존)
+
+---
+
+## Phase 1: MCP Expansion — 6 New Tools (Tickets P1-1 to P1-8)
+
+### Context
+Expand godot-rust-harness from 16 tools to 22 by adding Code Analysis, Project Structure, and Debug/Diagnose domains.
+
+### Tickets
+| # | Title | File | Action |
+|---|-------|------|--------|
+| P1-1 | Create src/tools/__init__.py | src/tools/__init__.py | 🔴 DIRECT |
+| P1-2 | Implement rust_analyze, rust_dependencies, crate_map | src/tools/analysis.py | 🔴 DIRECT |
+| P1-3 | Implement project_overview | src/tools/structure.py | 🔴 DIRECT |
+| P1-4 | Implement diagnose, build_explain | src/tools/diagnose.py | 🔴 DIRECT |
+| P1-5 | Create error_patterns.json (13 patterns) | src/rules/error_patterns.json | 🔴 DIRECT |
+| P1-6 | Register 6 new tools in server.py | src/server.py | 🔴 DIRECT |
+| P1-7 | Write tests (28 new tests) | tests/test_new_tools.py | 🔴 DIRECT |
+| P1-8 | Update README to 22-tool catalog | README.md | 🔴 DIRECT |
+
+### Results
+- Gate: PASS (88 tests total, 0 failures)
+- Files added: src/tools/__init__.py, src/tools/analysis.py, src/tools/structure.py, src/tools/diagnose.py, src/rules/error_patterns.json, tests/test_new_tools.py
+- Files modified: src/server.py, README.md
+- New tools: rust_analyze, rust_dependencies, crate_map, project_overview, diagnose, build_explain

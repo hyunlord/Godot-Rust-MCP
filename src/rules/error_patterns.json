@@ -1,0 +1,191 @@
+{
+  "patterns": [
+    {
+      "id": "GDEXT-BUILD-001",
+      "match": "cannot find type `Gd`",
+      "context": "build",
+      "error_type": "missing_import",
+      "root_cause": "godot prelude not imported",
+      "solutions": [
+        {
+          "description": "Add godot prelude import at the top of the file",
+          "code_change": "use godot::prelude::*;",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "id": "GDEXT-BUILD-002",
+      "match": "the trait `GodotClass` is not implemented",
+      "context": "build",
+      "error_type": "missing_derive",
+      "root_cause": "#[derive(GodotClass)] missing or base field absent",
+      "solutions": [
+        {
+          "description": "Add GodotClass derive and base field to the struct",
+          "code_change": "#[derive(GodotClass)]\n#[class(base=Node)]\nstruct MyClass {\n    base: Base<Node>,\n}",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "id": "GDEXT-BUILD-003",
+      "match": "no method named `base` found",
+      "context": "build",
+      "error_type": "missing_base_field",
+      "root_cause": "base: Base<T> field is missing from the GodotClass struct",
+      "solutions": [
+        {
+          "description": "Add base field to the struct",
+          "code_change": "base: Base<Node>,",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "id": "GDEXT-BUILD-004",
+      "match": "expected struct `Dictionary`, found struct `HashMap`",
+      "context": "build",
+      "error_type": "wrong_ffi_type",
+      "root_cause": "Rust std HashMap used at FFI boundary where Godot Dictionary required",
+      "solutions": [
+        {
+          "description": "Use godot::builtin::Dictionary at FFI boundaries",
+          "code_change": "use godot::builtin::Dictionary;",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "id": "GDEXT-RUNTIME-001",
+      "match": "already borrowed: BorrowMutError",
+      "context": "runtime",
+      "error_type": "borrow_conflict",
+      "root_cause": "Gd::bind() or Gd::bind_mut() called while already borrowed (re-entrant access)",
+      "solutions": [
+        {
+          "description": "Extract data before the operation that causes re-entrant access",
+          "code_change": "// Extract data first, then release borrow, then operate\nlet data = self.base().get_node_as::<MyNode>(\"path\");\n// use data without holding borrow",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "id": "GDEXT-RUNTIME-002",
+      "match": "not on main thread",
+      "context": "runtime",
+      "error_type": "thread_safety",
+      "root_cause": "Godot API called from a spawned thread — Godot is single-threaded",
+      "solutions": [
+        {
+          "description": "Move Godot API calls to main thread. Use channels to send data back.",
+          "code_change": "// Send result via channel, process in _process() on main thread",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "id": "GDEXT-RUNTIME-003",
+      "match": "GDExtension library not found",
+      "context": "runtime",
+      "error_type": "missing_library",
+      "root_cause": ".gdextension file path wrong or Rust library not built yet",
+      "solutions": [
+        {
+          "description": "Build the Rust library first",
+          "code_change": "cargo build",
+          "confidence": "high"
+        },
+        {
+          "description": "Check .gdextension file library paths match actual build output location",
+          "code_change": "# In your .gdextension file:\n# [libraries]\n# linux.debug.x86_64 = \"res://../target/debug/libmygame.so\"",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "id": "GDEXT-RUNTIME-004",
+      "match": "Godot function.*unavailable",
+      "context": "runtime",
+      "error_type": "api_version_mismatch",
+      "root_cause": "API version mismatch or method hash changed between Godot versions",
+      "solutions": [
+        {
+          "description": "Ensure gdext version matches your Godot version via api-4-x feature flag",
+          "code_change": "# In Cargo.toml:\ngodot = { version = \"0.2\", features = [\"api-4-3\"] }",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "id": "GDEXT-EDITOR-001",
+      "match": "Can't load GDExtension config",
+      "context": "godot",
+      "error_type": "gdextension_config",
+      "root_cause": "GDExtension .gdextension file not found or library binary missing",
+      "solutions": [
+        {
+          "description": "Run cargo build to produce the library, then check .gdextension paths",
+          "code_change": "cargo build",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "id": "GDEXT-EDITOR-002",
+      "match": "Script inherits from native type.*but is not registered",
+      "context": "godot",
+      "error_type": "unregistered_class",
+      "root_cause": "GodotClass struct not registered in ExtensionLibrary init function",
+      "solutions": [
+        {
+          "description": "Register the class in your ExtensionLibrary impl",
+          "code_change": "struct MyExtension;\n#[gdextension]\nunsafe impl ExtensionLibrary for MyExtension {}",
+          "confidence": "high"
+        }
+      ]
+    },
+    {
+      "id": "CARGO-001",
+      "match": "error\\[E0308\\].*mismatched types",
+      "context": "build",
+      "error_type": "type_mismatch",
+      "root_cause": "Type mismatch — function expects one type but received another",
+      "solutions": [
+        {
+          "description": "Check the function signature and ensure argument types match",
+          "code_change": "// Use .into() for compatible type conversions\nmy_function(value.into())",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "id": "CARGO-002",
+      "match": "error\\[E0382\\].*use of moved value",
+      "context": "build",
+      "error_type": "use_after_move",
+      "root_cause": "Value used after being moved into another binding or function call",
+      "solutions": [
+        {
+          "description": "Clone the value before moving, or restructure to avoid the move",
+          "code_change": "let cloned = value.clone();\nsome_function(value);\n// use cloned here",
+          "confidence": "medium"
+        }
+      ]
+    },
+    {
+      "id": "CARGO-003",
+      "match": "error\\[E0502\\].*cannot borrow.*as mutable because it is also borrowed as immutable",
+      "context": "build",
+      "error_type": "borrow_conflict",
+      "root_cause": "Simultaneous mutable and immutable borrows of the same value",
+      "solutions": [
+        {
+          "description": "Restructure code to ensure borrows don't overlap. Extract data to a local variable first.",
+          "code_change": "let data = collection.get(key).cloned();\ncollection.insert(other_key, data);",
+          "confidence": "medium"
+        }
+      ]
+    }
+  ]
+}

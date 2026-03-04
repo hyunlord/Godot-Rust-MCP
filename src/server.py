@@ -10,6 +10,9 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
 from .godot_ws import GodotWS
+from .tools.analysis import rust_analyze, rust_dependencies, crate_map
+from .tools.structure import project_overview
+from .tools.diagnose import diagnose, build_explain
 
 app = Server("godot-rust-harness")
 ROOT = Path(os.environ.get("PROJECT_ROOT", ".")).resolve()
@@ -407,6 +410,102 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    # ── Domain 2: Code Analysis ───────────────────────────────────────────────
+    Tool(
+        name="rust_analyze",
+        description=(
+            "Analyze Rust code quality in PROJECT_ROOT. Runs cargo clippy --message-format=json "
+            "plus custom checks: unwrap, unsafe blocks, clone_heavy, error_handling, dead_code. "
+            "Returns {issues: [{file, line, check, severity, message, suggestion}], summary}."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Relative path to file or directory (default: entire project)"},
+                "checks": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Checks to run: unwrap, unsafe, clone_heavy, error_handling, dead_code (default: all)",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="rust_dependencies",
+        description=(
+            "Analyze crate dependency tree using cargo tree. Shows direct dependencies, "
+            "outdated deps (if cargo-outdated installed). "
+            "Returns {dependency_tree, direct_dependencies, outdated, notes}."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "package": {"type": "string", "description": "Crate name to analyze (-p PKG)"},
+            },
+        },
+    ),
+    Tool(
+        name="crate_map",
+        description=(
+            "Visualize workspace crate dependency graph. "
+            "Returns {graph, format, crate_count, crates}. "
+            "Use format='mermaid' for diagram output."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "format": {
+                    "type": "string",
+                    "enum": ["text", "mermaid"],
+                    "description": "Output format: text (default) or mermaid diagram",
+                },
+            },
+        },
+    ),
+    # ── Domain 3: Project Structure ───────────────────────────────────────────
+    Tool(
+        name="project_overview",
+        description=(
+            "Scan the full Godot+Rust project structure. Returns Rust workspace crates, "
+            "Godot project info (autoloads, scenes, GDScript files), gdext bridge classes "
+            "(GodotClass structs, #[func] methods, #[signal] declarations), and health checks."
+        ),
+        inputSchema={"type": "object", "properties": {}},
+    ),
+    # ── Domain 7: Debug & Diagnose ────────────────────────────────────────────
+    Tool(
+        name="diagnose",
+        description=(
+            "Analyze a build or runtime error string and suggest fixes from a known pattern DB. "
+            "Covers gdext build errors, runtime panics, and Godot editor errors. "
+            "Returns {error_type, root_cause, solutions: [{description, code_change, confidence}]}."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["error"],
+            "properties": {
+                "error": {"type": "string", "description": "The error message or stack trace to analyze"},
+                "context": {
+                    "type": "string",
+                    "enum": ["auto", "build", "runtime", "godot"],
+                    "description": "Error context (default: auto-detect)",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="build_explain",
+        description=(
+            "Run `cargo build --message-format=json` and return errors with plain-language explanations. "
+            "Returns {success, errors: [{raw, error_code, file, line, explanation, fix_suggestion}], warnings}."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "package": {"type": "string", "description": "Crate name to build (-p PKG)"},
+            },
+        },
+    ),
 ]
 
 
@@ -515,6 +614,24 @@ async def _dispatch(name: str, args: dict) -> dict:
                 "path": args.get("path", "user://golden_dump.json"),
                 "tag": args.get("tag", ""),
             })
+
+        case "rust_analyze":
+            return rust_analyze(ROOT, args.get("path", ""), args.get("checks"))
+
+        case "rust_dependencies":
+            return rust_dependencies(ROOT, args.get("package", ""))
+
+        case "crate_map":
+            return crate_map(ROOT, args.get("format", "text"))
+
+        case "project_overview":
+            return project_overview(ROOT)
+
+        case "diagnose":
+            return diagnose(args.get("error", ""), args.get("context", "auto"))
+
+        case "build_explain":
+            return build_explain(ROOT, args.get("package", ""))
 
         case _:
             return {"error": f"Unknown tool: {name!r}"}

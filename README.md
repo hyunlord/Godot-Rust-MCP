@@ -119,48 +119,49 @@ Your AI assistant now has 16 new tools for runtime verification.
 
 ---
 
-## Available Tools (16)
+## Available Tools (22)
 
-### Build & Lint
+### Build & Verify (16 tools)
 
 | Tool | What it does |
 |------|-------------|
 | `rust_build` | Run `cargo build` (optional: specific crate, release mode) |
 | `rust_test` | Run `cargo test` (optional: filter by test name) |
 | `rust_clippy` | Run `cargo clippy -- -D warnings` |
-
-### Godot Control
-
-| Tool | What it does |
-|------|-------------|
 | `godot_start` | Launch Godot in headless mode, connect via WebSocket |
 | `godot_stop` | Shut down Godot and close connection |
 | `godot_reset` | Reset simulation with a specific RNG seed and agent count |
-
-### Simulation
-
-| Tool | What it does |
-|------|-------------|
 | `godot_tick` | Advance the simulation by N ticks |
 | `godot_snapshot` | Get a summary of all alive entities (capped at 200) |
 | `godot_query` | Get full details of one entity or settlement by ID |
 | `godot_scene_tree` | Get the Godot scene tree as JSON |
 | `godot_bench` | Benchmark tick performance (avg, min, max, p95, median) |
-
-### Testing & Debugging
-
-| Tool | What it does |
-|------|-------------|
 | `godot_invariant` | Run runtime checks on entity data |
 | `godot_force_event` | Inject an event on a specific entity |
 | `godot_set_config` | Change a simulation config value at runtime |
 | `godot_golden_dump` | Save full simulation state to a JSON file |
+| `verify` | Build → clippy → test → start → reset → tick → check → stop |
 
-### All-in-One
+### Code Analysis (3 tools)
 
 | Tool | What it does |
 |------|-------------|
-| `verify` | Build → clippy → test → start → reset → tick → check → stop |
+| `rust_analyze` | Find code quality issues: `.unwrap()`, `unsafe` blocks, clone-heavy patterns, clippy warnings |
+| `rust_dependencies` | Analyze crate dependency tree; show outdated deps (requires `cargo-outdated`) |
+| `crate_map` | Visualize workspace crate dependency graph (text or Mermaid format) |
+
+### Project Structure (1 tool)
+
+| Tool | What it does |
+|------|-------------|
+| `project_overview` | Full project scan: Rust crates, Godot autoloads/scenes, gdext bridge classes (`#[func]`, `#[signal]`) |
+
+### Debug & Diagnose (2 tools)
+
+| Tool | What it does |
+|------|-------------|
+| `diagnose` | Analyze a build/runtime error and suggest fixes from a known pattern DB |
+| `build_explain` | Run `cargo build` and return errors with plain-language explanations |
 
 ---
 
