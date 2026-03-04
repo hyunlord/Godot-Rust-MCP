@@ -119,7 +119,7 @@ Your AI assistant now has 16 new tools for runtime verification.
 
 ---
 
-## Available Tools (22)
+## Available Tools (27)
 
 ### Build & Verify (16 tools)
 
@@ -162,6 +162,21 @@ Your AI assistant now has 16 new tools for runtime verification.
 |------|-------------|
 | `diagnose` | Analyze a build/runtime error and suggest fixes from a known pattern DB |
 | `build_explain` | Run `cargo build` and return errors with plain-language explanations |
+
+### gdext Patterns (3 tools)
+
+| Tool | What it does |
+|------|-------------|
+| `gdext_check` | Validate gdext usage patterns — 15 rules across safety, performance, and patterns |
+| `gdext_scaffold` | Generate boilerplate for: godot_class, singleton, resource, bridge_class, signal_hub, export_enum |
+| `gdext_version_check` | Check gdext Cargo.toml version vs Godot binary for compatibility warnings |
+
+### GDScript → Rust Migration (2 tools)
+
+| Tool | What it does |
+|------|-------------|
+| `migration_scan` | Analyze GDScript files: classify, estimate effort, generate Rust skeleton (detail mode) |
+| `migration_diff` | Compare original GDScript with converted Rust — method coverage and pattern mapping |
 
 ---
 

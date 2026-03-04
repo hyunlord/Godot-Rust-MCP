@@ -1,0 +1,139 @@
+{
+  "rules": [
+    {
+      "id": "GDEXT-001",
+      "name": "unwrap_in_func",
+      "severity": "error",
+      "pattern": "#\\[func\\][\\s\\S]{0,200}\\.unwrap\\(\\)",
+      "message": "#[func] method uses .unwrap() — will panic and crash Godot editor/runtime",
+      "suggestion": "Use .unwrap_or_default() or return a Result-based Variant",
+      "category": "safety"
+    },
+    {
+      "id": "GDEXT-002",
+      "name": "stringname_alloc_in_loop",
+      "severity": "warning",
+      "pattern": "for\\s+.+\\{[\\s\\S]{0,500}StringName::from",
+      "message": "StringName::from() allocation inside a loop — allocates on every iteration",
+      "suggestion": "Cache StringName as a const or lazy_static outside the loop",
+      "category": "performance"
+    },
+    {
+      "id": "GDEXT-003",
+      "name": "gstring_alloc_in_process",
+      "severity": "warning",
+      "pattern": "fn _process\\([\\s\\S]{0,500}GString::from|fn _process\\([\\s\\S]{0,500}String::from",
+      "message": "String/GString allocation in _process() — runs every frame",
+      "suggestion": "Cache as StringName or GString field, initialize in ready()",
+      "category": "performance"
+    },
+    {
+      "id": "GDEXT-004",
+      "name": "thread_spawn_with_gd",
+      "severity": "error",
+      "pattern": "thread::spawn[\\s\\S]{0,200}Gd<",
+      "message": "Gd<T> used in thread::spawn closure — Gd is not Send, will panic",
+      "suggestion": "Extract data from Gd<T> before spawning. Use channels to return results.",
+      "category": "safety"
+    },
+    {
+      "id": "GDEXT-005",
+      "name": "dictionary_return_in_func",
+      "severity": "warning",
+      "pattern": "#\\[func\\][\\s\\S]{0,100}->\\s*Dictionary",
+      "message": "#[func] returning Dictionary — each access converts Variant, consider typed struct",
+      "suggestion": "For bulk data transfer, use PackedByteArray (zero-copy) or a typed GodotClass",
+      "category": "performance"
+    },
+    {
+      "id": "GDEXT-006",
+      "name": "array_dictionary_in_func",
+      "severity": "warning",
+      "pattern": "#\\[func\\][\\s\\S]{0,100}->\\s*Array<Dictionary>",
+      "message": "#[func] returning Array<Dictionary> — high Variant conversion overhead for large arrays",
+      "suggestion": "Use PackedByteArray with MessagePack/JSON serialization for bulk entity data",
+      "category": "performance"
+    },
+    {
+      "id": "GDEXT-007",
+      "name": "base_mut_before_super",
+      "severity": "warning",
+      "pattern": "fn ready[\\s\\S]{0,200}base_mut\\(\\)[\\s\\S]{0,200}on_ready",
+      "message": "base_mut() called in ready() before super — may cause crash in some Godot versions",
+      "suggestion": "Call on_ready/super first, then use base_mut()",
+      "category": "safety"
+    },
+    {
+      "id": "GDEXT-008",
+      "name": "gd_clone_unnecessary",
+      "severity": "warning",
+      "pattern": "\\.clone\\(\\)\\s*;\\s*$",
+      "message": "Cloning Gd<T> at end of statement — result unused, consider if clone is needed",
+      "suggestion": "Use &Gd<T> reference instead if ownership not needed",
+      "category": "performance"
+    },
+    {
+      "id": "GDEXT-009",
+      "name": "missing_class_init",
+      "severity": "warning",
+      "pattern": "#\\[derive\\(GodotClass\\)\\][\\s\\S]{0,100}struct\\s+\\w+[\\s\\S]{0,200}(?<!#\\[class\\(init\\)\\])[\\s\\S]{0,50}impl\\s+INode",
+      "message": "GodotClass without #[class(init)] may not initialize properly in Godot editor",
+      "suggestion": "Add #[class(init)] if this class needs default construction from Godot editor",
+      "category": "pattern"
+    },
+    {
+      "id": "GDEXT-010",
+      "name": "var_on_large_struct",
+      "severity": "warning",
+      "pattern": "#\\[var\\]\\s*(?:pub\\s+)?\\w+:\\s*(?:Vec|HashMap|BTreeMap|HashSet)",
+      "message": "#[var] on collection type — every Godot property access converts to Variant",
+      "suggestion": "Expose via #[func] methods instead of #[var] for collection types",
+      "category": "performance"
+    },
+    {
+      "id": "GDEXT-011",
+      "name": "deprecated_bind_mut_in_signal",
+      "severity": "warning",
+      "pattern": "connect\\([\\s\\S]{0,200}(?:bind_mut|Callable)[\\s\\S]{0,200}\\.bind_mut\\(",
+      "message": "bind_mut() inside signal connection may cause deadlock if signal fires during borrow",
+      "suggestion": "Extract the needed data before the signal handler executes",
+      "category": "safety"
+    },
+    {
+      "id": "GDEXT-012",
+      "name": "missing_tool_for_editor_plugin",
+      "severity": "error",
+      "pattern": "impl EditorPlugin[\\s\\S]{0,100}(?<!#\\[class\\(tool(?:,\\s*base=EditorPlugin)?\\)\\])",
+      "message": "EditorPlugin implementation without #[class(tool)] — plugin won't run in editor",
+      "suggestion": "Add #[class(tool, base=EditorPlugin)] to the struct",
+      "category": "pattern"
+    },
+    {
+      "id": "GDEXT-013",
+      "name": "export_untyped_array",
+      "severity": "warning",
+      "pattern": "#\\[export\\]\\s*(?:pub\\s+)?\\w+:\\s*Array<Variant>",
+      "message": "#[export] with Array<Variant> — untyped array shows poorly in Godot editor",
+      "suggestion": "Use a typed Array<T> or PackedArray for better editor integration",
+      "category": "pattern"
+    },
+    {
+      "id": "GDEXT-014",
+      "name": "dictionary_get_in_loop",
+      "severity": "warning",
+      "pattern": "for\\s+.+\\{[\\s\\S]{0,300}\\.get\\([\\s\\S]{0,50}\\)",
+      "message": "Dictionary.get() inside loop — extract values before the loop",
+      "suggestion": "Extract dictionary values before the loop with let val = dict.get(key);",
+      "category": "performance"
+    },
+    {
+      "id": "GDEXT-015",
+      "name": "variant_conversion_in_process",
+      "severity": "warning",
+      "pattern": "fn _process[\\s\\S]{0,500}Variant::from|fn _process[\\s\\S]{0,500}\\.to_variant\\(",
+      "message": "Variant conversion in _process() — runs every frame, allocates",
+      "suggestion": "Cache converted values or avoid Variant in hot paths",
+      "category": "performance"
+    }
+  ]
+}

@@ -13,6 +13,8 @@ from .godot_ws import GodotWS
 from .tools.analysis import rust_analyze, rust_dependencies, crate_map
 from .tools.structure import project_overview
 from .tools.diagnose import diagnose, build_explain
+from .tools.gdext import gdext_check, gdext_scaffold, gdext_version_check
+from .tools.migration import migration_scan, migration_diff
 
 app = Server("godot-rust-harness")
 ROOT = Path(os.environ.get("PROJECT_ROOT", ".")).resolve()
@@ -506,6 +508,94 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    # ── Domain 6: gdext Patterns ──────────────────────────────────────────────
+    Tool(
+        name="gdext_check",
+        description=(
+            "Check Rust source files for gdext anti-patterns using a rule DB (15 rules). "
+            "Catches: .unwrap() in #[func], StringName allocation in loops, thread safety issues, "
+            "performance anti-patterns, and common gdext mistakes. "
+            "Returns {issues: [{file, line, rule_id, severity, message, suggestion, category}], summary}."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Relative path to file or directory (default: entire project)"},
+            },
+        },
+    ),
+    Tool(
+        name="gdext_scaffold",
+        description=(
+            "Generate boilerplate Rust code for common gdext patterns. "
+            "Patterns: godot_class, singleton, resource, bridge_class, signal_hub, export_enum. "
+            "Returns {code, file_path, pattern, notes, usage_gdscript}."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+                "name": {"type": "string", "description": "Struct/class name in PascalCase (e.g. SimBridge)"},
+                "pattern": {
+                    "type": "string",
+                    "enum": ["godot_class", "singleton", "resource", "bridge_class", "signal_hub", "export_enum"],
+                    "description": "Scaffold pattern to generate (default: godot_class)",
+                },
+                "base": {"type": "string", "description": "Godot base class (default: Node)"},
+                "fields": {
+                    "type": "array",
+                    "description": "Optional fields: [{name, type, default, export}]",
+                    "items": {"type": "object"},
+                },
+            },
+        },
+    ),
+    Tool(
+        name="gdext_version_check",
+        description=(
+            "Check gdext Cargo.toml version vs Godot binary version for compatibility. "
+            "Returns {gdext_version, godot_version, api_feature, compatible, warnings}."
+        ),
+        inputSchema={"type": "object", "properties": {}},
+    ),
+    # ── Domain 4: Migration ───────────────────────────────────────────────────
+    Tool(
+        name="migration_scan",
+        description=(
+            "Analyze GDScript files and estimate migration effort to Rust. "
+            "Use mode='scan' (default) for project overview, mode='detail' with path for one-file analysis "
+            "that generates a Rust skeleton. "
+            "Returns {files: [{path, lines, complexity, migration_effort, category, should_migrate}], summary}."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Relative path to .gd file or directory (default: entire project)"},
+                "mode": {
+                    "type": "string",
+                    "enum": ["scan", "detail"],
+                    "description": "scan: summary of all files. detail: deep analysis + Rust skeleton for single file.",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="migration_diff",
+        description=(
+            "Compare a GDScript source file with its converted Rust file. "
+            "Checks method coverage, function mapping patterns. "
+            "Returns {coverage: {gdscript_methods, rust_methods, matched, missing_in_rust, extra_in_rust}, "
+            "pattern_checks, warnings}."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["gdscript_path", "rust_path"],
+            "properties": {
+                "gdscript_path": {"type": "string", "description": "Relative path to original .gd file"},
+                "rust_path": {"type": "string", "description": "Relative path to converted .rs file"},
+            },
+        },
+    ),
 ]
 
 
@@ -632,6 +722,26 @@ async def _dispatch(name: str, args: dict) -> dict:
 
         case "build_explain":
             return build_explain(ROOT, args.get("package", ""))
+
+        case "gdext_check":
+            return gdext_check(ROOT, args.get("path", ""))
+
+        case "gdext_scaffold":
+            return gdext_scaffold(
+                args.get("name", "MyClass"),
+                args.get("pattern", "godot_class"),
+                args.get("base", "Node"),
+                args.get("fields"),
+            )
+
+        case "gdext_version_check":
+            return gdext_version_check(ROOT)
+
+        case "migration_scan":
+            return migration_scan(ROOT, args.get("path", ""), args.get("mode", "scan"))
+
+        case "migration_diff":
+            return migration_diff(ROOT, args.get("gdscript_path", ""), args.get("rust_path", ""))
 
         case _:
             return {"error": f"Unknown tool: {name!r}"}

@@ -354,3 +354,27 @@ Expand godot-rust-harness from 16 tools to 22 by adding Code Analysis, Project S
 - Files added: src/tools/__init__.py, src/tools/analysis.py, src/tools/structure.py, src/tools/diagnose.py, src/rules/error_patterns.json, tests/test_new_tools.py
 - Files modified: src/server.py, README.md
 - New tools: rust_analyze, rust_dependencies, crate_map, project_overview, diagnose, build_explain
+
+---
+
+## Phase 2: gdext + Migration Tools (Tickets P2-1 to P2-8)
+
+### Context
+Add gdext pattern checking, scaffold generation, version compatibility, and GDScript→Rust migration tooling.
+
+### Tickets
+| # | Title | File | Action |
+|---|-------|------|--------|
+| P2-1 | gdext_rules.json (15 rules) | src/rules/gdext_rules.json | 🔴 DIRECT |
+| P2-2 | migration_map.json (type/func/pattern maps) | src/rules/migration_map.json | 🔴 DIRECT |
+| P2-3 | gdext_check, gdext_scaffold, gdext_version_check | src/tools/gdext.py | 🔴 DIRECT |
+| P2-4 | migration_scan, migration_diff | src/tools/migration.py | 🔴 DIRECT |
+| P2-5 | Register 5 new tools in server.py | src/server.py | 🔴 DIRECT |
+| P2-6 | Write Phase 2 tests (29 new tests) | tests/test_phase2_tools.py | 🔴 DIRECT |
+| P2-7 | Update README to 27-tool catalog | README.md | 🔴 DIRECT |
+
+### Results
+- Gate: PASS (117 tests total, 0 failures)
+- Files added: src/tools/gdext.py, src/tools/migration.py, src/rules/gdext_rules.json, src/rules/migration_map.json, tests/test_phase2_tools.py
+- Files modified: src/server.py, README.md
+- New tools: gdext_check, gdext_scaffold, gdext_version_check, migration_scan, migration_diff

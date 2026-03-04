@@ -1,0 +1,97 @@
+{
+  "type_map": {
+    "float": "f64",
+    "int": "i64",
+    "bool": "bool",
+    "String": "GString",
+    "Array": "Vec<T>",
+    "Dictionary": "HashMap<K, V>",
+    "Vector2": "Vector2",
+    "Vector3": "Vector3",
+    "Vector4": "Vector4",
+    "Color": "Color",
+    "NodePath": "NodePath",
+    "StringName": "StringName",
+    "Callable": "Callable",
+    "PackedByteArray": "PackedByteArray",
+    "PackedFloat32Array": "PackedFloat32Array",
+    "PackedInt32Array": "PackedInt32Array",
+    "PackedStringArray": "PackedStringArray",
+    "PackedVector2Array": "PackedVector2Array",
+    "PackedVector3Array": "PackedVector3Array"
+  },
+  "function_map": {
+    "randf()": "rng.gen::<f64>()",
+    "randf_range(a, b)": "rng.gen_range(a..=b)",
+    "randfn(mean, dev)": "Normal::new(mean, dev).unwrap().sample(&mut rng)",
+    "randi_range(a, b)": "rng.gen_range(a..=b)",
+    "randi() % n": "rng.gen_range(0..n)",
+    "clamp(v, lo, hi)": "v.clamp(lo, hi)",
+    "abs(x)": "x.abs()",
+    "max(a, b)": "a.max(b)",
+    "min(a, b)": "a.min(b)",
+    "exp(x)": "x.exp()",
+    "log(x)": "x.ln()",
+    "sqrt(x)": "x.sqrt()",
+    "pow(x, y)": "x.powf(y)",
+    "lerp(a, b, t)": "a + (b - a) * t",
+    "inverse_lerp(a, b, v)": "(v - a) / (b - a)",
+    "sign(x)": "x.signum()",
+    "round(x)": "x.round()",
+    "floor(x)": "x.floor()",
+    "ceil(x)": "x.ceil()",
+    "snapped(x, step)": "(x / step).round() * step",
+    "wrapf(v, lo, hi)": "lo + (v - lo).rem_euclid(hi - lo)",
+    "PI": "std::f64::consts::PI",
+    "TAU": "std::f64::consts::TAU",
+    "INF": "f64::INFINITY",
+    "NAN": "f64::NAN"
+  },
+  "pattern_map": {
+    "signal xxx(a, b)": "// EventBus: pub struct XxxEvent { pub a: T, pub b: U }",
+    "emit_signal(\"xxx\", args)": "event_bus.emit(XxxEvent { .. })",
+    "get_tree()": "// Not available in pure Rust — use event system or pass via #[func]",
+    "get_node(path)": "self.base().get_node_as::<NodeType>(path)",
+    "yield(signal)": "// No coroutines in Rust — use state machine or system scheduling",
+    "match value:": "match value {",
+    "func name(args):": "fn name(args) {",
+    "var x = value": "let x = value;",
+    "var x: Type = value": "let x: Type = value;",
+    "if condition:": "if condition {",
+    "for item in array:": "for item in array {",
+    "while condition:": "while condition {",
+    "return value": "return value;",
+    "null": "None",
+    "true": "true",
+    "false": "false",
+    "print(x)": "println!(\"{:?}\", x);",
+    "push_error(msg)": "eprintln!(\"[Error] {}\", msg);",
+    "push_warning(msg)": "eprintln!(\"[Warning] {}\", msg);"
+  },
+  "migration_categories": {
+    "ui": {
+      "description": "UI/Control nodes — keep in GDScript",
+      "patterns": ["extends Control", "extends Panel", "extends Button", "extends Label", "extends LineEdit", "extends PopupMenu", "extends Tree", "extends ItemList"],
+      "should_migrate": false,
+      "reason": "UI code benefits from GDScript's Godot editor integration"
+    },
+    "logic": {
+      "description": "Pure logic/simulation — migrate to Rust",
+      "patterns": ["func process_tick", "func step(", "func update(", "func simulate("],
+      "should_migrate": true,
+      "reason": "Logic code benefits from Rust's performance and type safety"
+    },
+    "data": {
+      "description": "Data containers — migrate if performance-critical",
+      "patterns": ["extends Resource", "var data = {", "var entities = []"],
+      "should_migrate": true,
+      "reason": "Data structs map cleanly to Rust structs"
+    },
+    "bridge": {
+      "description": "Godot-Rust bridge — keep thin, migrate logic underneath",
+      "patterns": ["extends Node", "func _ready(", "func _process("],
+      "should_migrate": false,
+      "reason": "Bridge code should stay thin; move logic to pure Rust"
+    }
+  }
+}
