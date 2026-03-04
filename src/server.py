@@ -132,12 +132,17 @@ async def _verify(args: dict) -> dict:
     if not steps["build"]["success"]:
         return {"passed": False, "failed_at": "build", "steps": steps}
 
-    # Step 2: cargo test
+    # Step 2: cargo clippy
+    steps["clippy"] = _cargo("clippy", pkg, ["--", "-D", "warnings"])
+    if not steps["clippy"]["success"]:
+        return {"passed": False, "failed_at": "clippy", "steps": steps}
+
+    # Step 3: cargo test
     steps["test"] = _cargo("test", pkg)
     if not steps["test"]["success"]:
         return {"passed": False, "failed_at": "test", "steps": steps}
 
-    # Step 3: Godot start
+    # Step 4: Godot start
     steps["start"] = await _godot_start(9877)
     if "error" in steps["start"]:
         return {"passed": False, "failed_at": "godot_start", "steps": steps}
@@ -303,7 +308,7 @@ TOOLS: list[Tool] = [
     Tool(
         name="verify",
         description=(
-            "Run the full verification pipeline: cargo build → cargo test → "
+            "Run the full verification pipeline: cargo build → cargo clippy → cargo test → "
             "godot start → reset → tick → invariant check → godot stop. "
             "Returns {passed: bool, failed_at: str|null, steps: dict}."
         ),
@@ -314,6 +319,45 @@ TOOLS: list[Tool] = [
                 "seed": {"type": "integer", "description": "Reset seed (default 42)"},
                 "agents": {"type": "integer", "description": "Initial agents (default 50)"},
                 "ticks": {"type": "integer", "description": "Ticks to advance (default 100)"},
+            },
+        },
+    ),
+    Tool(
+        name="godot_force_event",
+        description="Inject an event on a specific entity. Useful for testing system responses to specific stimuli.",
+        inputSchema={
+            "type": "object",
+            "required": ["entity_id", "event_type"],
+            "properties": {
+                "entity_id": {"type": "integer", "description": "Target entity ID"},
+                "event_type": {"type": "string", "description": "Event type name (e.g. 'stressor_injection')"},
+                "params": {"type": "object", "description": "Additional event parameters (default {})"},
+            },
+        },
+    ),
+    Tool(
+        name="godot_set_config",
+        description="Set a simulation config value at runtime without restarting Godot.",
+        inputSchema={
+            "type": "object",
+            "required": ["key"],
+            "properties": {
+                "key": {"type": "string", "description": "Config key name"},
+                "value": {"description": "Value to set (any JSON type)"},
+            },
+        },
+    ),
+    Tool(
+        name="godot_golden_dump",
+        description=(
+            "Dump full simulation state to a JSON file for golden-test regression comparison. "
+            "Returns {path, entities_count, tick}."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Output file path (default 'user://golden_dump.json')"},
+                "tag": {"type": "string", "description": "Optional label for the dump"},
             },
         },
     ),
@@ -400,6 +444,31 @@ async def _dispatch(name: str, args: dict) -> dict:
 
         case "verify":
             return await _verify(args)
+
+        case "godot_force_event":
+            if err := _godot_check():
+                return err
+            return await _godot.send("force_event", {
+                "entity_id": int(args.get("entity_id", -1)),
+                "event_type": args.get("event_type", ""),
+                "params": args.get("params", {}),
+            })
+
+        case "godot_set_config":
+            if err := _godot_check():
+                return err
+            return await _godot.send("set_config", {
+                "key": args.get("key", ""),
+                "value": args.get("value"),
+            })
+
+        case "godot_golden_dump":
+            if err := _godot_check():
+                return err
+            return await _godot.send("golden_dump", {
+                "path": args.get("path", "user://golden_dump.json"),
+                "tag": args.get("tag", ""),
+            })
 
         case _:
             return {"error": f"Unknown tool: {name!r}"}

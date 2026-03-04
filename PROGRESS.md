@@ -37,3 +37,28 @@ Work log for the godot-rust-harness MCP plugin implementation.
 - Python MCP server (src/server.py) ↔ GDScript harness (addons/harness/)
 - Activates ONLY in --headless or --harness mode
 - Zero production impact
+
+---
+
+## Session 2 — 2026-03-04
+
+### Status: COMPLETE ✅
+
+### Completed
+- [x] P-001 `git mv CLADUE.md → CLAUDE.md` — fixes silent rules-file miss for all AI agents
+- [x] P-002 `src/server.py` — 3 new MCP tools (force_event, set_config, golden_dump) + clippy step in _verify()
+- [x] P-003 `tests/test_server.py` — 8 new tests (6 dispatch + 2 verify/clippy); 54 total
+- [x] P-004 `.github/workflows/test.yml` — pytest on push/PR to main
+- [x] P-005 `PROGRESS.md` — this entry
+
+### Gate results
+- Python compile: ✅ server.py clean
+- pytest: ✅ 54 passed in 1.52s (8 new tests)
+- File rename: ✅ CLAUDE.md present, CLADUE.md gone
+- Tool count: ✅ 16 tools (13 original + 3 new)
+- CI workflow: ✅ .github/workflows/test.yml present
+
+### Changes summary
+- `_verify()` pipeline: build → **clippy** → test → godot_start → reset → tick → invariant → stop
+- New MCP tools: `godot_force_event`, `godot_set_config`, `godot_golden_dump`
+- All new tools follow existing pattern: Tool definition → _dispatch case → _godot_check guard → WS proxy

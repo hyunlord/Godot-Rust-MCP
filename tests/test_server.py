@@ -335,13 +335,14 @@ class TestDispatch:
 # ── Tool list tests ────────────────────────────────────────────────────────────
 
 class TestToolList:
-    def test_has_12_core_tools_plus_verify(self):
+    def test_has_all_tools(self):
         names = {t.name for t in srv.TOOLS}
         expected = {
             "rust_build", "rust_test", "rust_clippy",
             "godot_start", "godot_stop",
             "godot_tick", "godot_snapshot", "godot_query",
             "godot_scene_tree", "godot_invariant", "godot_reset", "godot_bench",
+            "godot_force_event", "godot_set_config", "godot_golden_dump",
             "verify",
         }
         assert expected.issubset(names)
@@ -350,3 +351,83 @@ class TestToolList:
         for tool in srv.TOOLS:
             assert tool.inputSchema is not None
             assert "type" in tool.inputSchema
+
+
+# ── New tool dispatch tests ─────────────────────────────────────────────────────
+
+class TestNewToolDispatch:
+    @pytest.mark.asyncio
+    async def test_godot_force_event_not_started(self):
+        result = await srv._dispatch("godot_force_event", {"entity_id": 1, "event_type": "test"})
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_godot_force_event_proxied(self):
+        mock_gws = AsyncMock()
+        mock_gws.connected = True
+        mock_gws.send = AsyncMock(return_value={"applied": True, "entity_id": 1, "event_type": "test"})
+        srv._godot = mock_gws
+        result = await srv._dispatch("godot_force_event", {"entity_id": 1, "event_type": "test"})
+        mock_gws.send.assert_called_once_with("force_event", {
+            "entity_id": 1, "event_type": "test", "params": {},
+        })
+        assert result["applied"] is True
+
+    @pytest.mark.asyncio
+    async def test_godot_set_config_not_started(self):
+        result = await srv._dispatch("godot_set_config", {"key": "speed", "value": 2.0})
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_godot_set_config_proxied(self):
+        mock_gws = AsyncMock()
+        mock_gws.connected = True
+        mock_gws.send = AsyncMock(return_value={"key": "speed", "value": 2.0, "applied": True})
+        srv._godot = mock_gws
+        result = await srv._dispatch("godot_set_config", {"key": "speed", "value": 2.0})
+        assert result["applied"] is True
+
+    @pytest.mark.asyncio
+    async def test_godot_golden_dump_not_started(self):
+        result = await srv._dispatch("godot_golden_dump", {})
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_godot_golden_dump_proxied(self):
+        mock_gws = AsyncMock()
+        mock_gws.connected = True
+        mock_gws.send = AsyncMock(return_value={"path": "user://golden_dump.json", "entities_count": 50, "tick": 100})
+        srv._godot = mock_gws
+        result = await srv._dispatch("godot_golden_dump", {})
+        assert result["entities_count"] == 50
+
+
+# ── _verify() clippy tests ─────────────────────────────────────────────────────
+
+class TestVerifyClippy:
+    @pytest.mark.asyncio
+    async def test_verify_runs_clippy(self):
+        with patch("subprocess.run") as mock_run:
+            # Build succeeds, clippy fails
+            mock_run.side_effect = [
+                make_proc(0),  # build
+                make_proc(1, "", "warning: unused variable"),  # clippy
+            ]
+            result = await srv._verify({})
+        assert result["passed"] is False
+        assert result["failed_at"] == "clippy"
+        assert "clippy" in result["steps"]
+
+    @pytest.mark.asyncio
+    async def test_verify_clippy_pass_proceeds_to_test(self):
+        with patch("subprocess.run") as mock_run:
+            # Build succeeds, clippy succeeds, test fails
+            mock_run.side_effect = [
+                make_proc(0),  # build
+                make_proc(0),  # clippy
+                make_proc(1, "", "FAILED"),  # test
+            ]
+            result = await srv._verify({})
+        assert result["passed"] is False
+        assert result["failed_at"] == "test"
+        assert "clippy" in result["steps"]
