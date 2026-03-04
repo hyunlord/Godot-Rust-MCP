@@ -129,11 +129,16 @@ func _find_adapter() -> GDScript:
 	dir.list_dir_begin()
 	var file_name: String = dir.get_next()
 	while file_name != "":
-		if file_name.ends_with("_adapter.gd") and file_name != "example_adapter.gd":
-			var path := "res://addons/harness/%s" % file_name
-			if ResourceLoader.exists(path):
-				return load(path) as GDScript
+		if file_name.ends_with("_adapter.gd"):
+			if file_name == "example_adapter.gd":
+				push_warning("[Harness] Skipping example_adapter.gd — rename it to activate (e.g. myproject_adapter.gd)")
+			else:
+				var path := "res://addons/harness/%s" % file_name
+				if ResourceLoader.exists(path):
+					dir.list_dir_end()
+					return load(path) as GDScript
 		file_name = dir.get_next()
+	dir.list_dir_end()
 	return null
 
 
