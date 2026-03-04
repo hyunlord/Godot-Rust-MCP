@@ -1,0 +1,124 @@
+{
+  "rules": [
+    {
+      "id": "PERF-MEM-001",
+      "name": "vec_smallvec_opportunity",
+      "pattern": "Vec<[A-Z]\\w+>",
+      "category": "memory",
+      "message": "Vec<T> for potentially small collections — consider SmallVec for short-lived data",
+      "suggestion": "SmallVec<[T; 8]> avoids heap allocation for N<=8 items",
+      "effort": "moderate",
+      "expected_improvement": "Eliminates heap allocation for small collections"
+    },
+    {
+      "id": "PERF-MEM-002",
+      "name": "string_ownership",
+      "pattern": "fn\\s+\\w+\\([^)]*:\\s*String[^&]",
+      "category": "memory",
+      "message": "Function takes owned String where &str would suffice",
+      "suggestion": "Use &str for read-only string parameters — avoids allocation at call site",
+      "effort": "trivial",
+      "expected_improvement": "Eliminates String clone/allocation on every call"
+    },
+    {
+      "id": "PERF-MEM-003",
+      "name": "hashmap_default",
+      "pattern": "HashMap<|BTreeMap<",
+      "category": "memory",
+      "message": "HashMap using default SipHash — consider ahash for non-cryptographic use",
+      "suggestion": "use ahash::AHashMap instead of std::collections::HashMap for 2-3x faster hashing",
+      "effort": "trivial",
+      "expected_improvement": "2-3x faster map operations for non-cryptographic keys"
+    },
+    {
+      "id": "PERF-MEM-004",
+      "name": "box_dyn_trait",
+      "pattern": "Box<dyn [\\w:+()\\s]+>",
+      "category": "memory",
+      "message": "Box<dyn Trait> requires heap allocation and virtual dispatch",
+      "suggestion": "If variants are known at compile time, use enum dispatch instead",
+      "effort": "moderate",
+      "expected_improvement": "Eliminates heap allocation, enables inlining"
+    },
+    {
+      "id": "PERF-CPU-001",
+      "name": "sequential_iteration",
+      "pattern": "\\.iter\\(\\)[\\s\\S]{0,100}\\.for_each\\(|for\\s+\\w+\\s+in\\s+\\w+\\.iter\\(",
+      "category": "cpu",
+      "message": "Sequential iteration over large collection — consider rayon par_iter",
+      "suggestion": "use rayon::prelude::*; collection.par_iter().for_each(...) for parallel processing",
+      "effort": "trivial",
+      "expected_improvement": "Linear speedup with CPU core count for independent operations"
+    },
+    {
+      "id": "PERF-CPU-002",
+      "name": "f64_where_f32_sufficient",
+      "pattern": ":\\s*f64|as f64|-> f64",
+      "category": "cpu",
+      "message": "f64 used — f32 may be sufficient for rendering/simulation values",
+      "suggestion": "Use f32 for positions, colors, UVs where sub-millimeter precision not needed",
+      "effort": "moderate",
+      "expected_improvement": "2x SIMD throughput, halved memory bandwidth for float arrays"
+    },
+    {
+      "id": "PERF-CPU-003",
+      "name": "repeated_index_lookup",
+      "pattern": "\\w+\\[\\w+\\][\\s\\S]{0,20}\\w+\\[\\w+\\][\\s\\S]{0,20}\\w+\\[\\w+\\]",
+      "category": "cpu",
+      "message": "Repeated indexing with same key — extract to local variable",
+      "suggestion": "let item = &collection[idx]; use item.field1, item.field2 instead of indexing twice",
+      "effort": "trivial",
+      "expected_improvement": "Reduces bounds checks, helps compiler optimize"
+    },
+    {
+      "id": "PERF-FFI-001",
+      "name": "dictionary_bulk_transfer",
+      "pattern": "Array<Dictionary>|Vec<Dictionary>",
+      "category": "ffi",
+      "message": "Array<Dictionary> for bulk data transfer — high Variant conversion overhead",
+      "suggestion": "Use PackedByteArray with MessagePack/JSON for bulk entity snapshots",
+      "effort": "significant",
+      "expected_improvement": "10-100x faster for 100+ entities (eliminates per-field Variant boxing)"
+    },
+    {
+      "id": "PERF-FFI-002",
+      "name": "per_frame_full_snapshot",
+      "pattern": "fn snapshot[\\s\\S]{0,200}Array|fn get_all[\\s\\S]{0,200}Dictionary",
+      "category": "ffi",
+      "message": "Full snapshot every call — consider delta encoding for frequent updates",
+      "suggestion": "Track last-sent state, send only changed entities (delta encoding)",
+      "effort": "significant",
+      "expected_improvement": "Reduces WebSocket transfer 5-10x for slowly-changing simulations"
+    },
+    {
+      "id": "PERF-FFI-003",
+      "name": "string_passing_ffi",
+      "pattern": "#\\[func\\][\\s\\S]{0,100}:\\s*GString|#\\[func\\][\\s\\S]{0,100}->\\s*GString",
+      "category": "ffi",
+      "message": "#[func] with GString parameter — use StringName for interned strings",
+      "suggestion": "Use StringName for event names, keys, identifiers passed frequently across FFI",
+      "effort": "trivial",
+      "expected_improvement": "StringName comparison is O(1) pointer equality vs O(n) string compare"
+    },
+    {
+      "id": "PERF-ECS-001",
+      "name": "wide_query",
+      "pattern": "Query<\\(&[A-Z]\\w+,\\s*&[A-Z]\\w+,\\s*&[A-Z]\\w+,\\s*&[A-Z]\\w+",
+      "category": "ecs",
+      "message": "Wide ECS query with 4+ components — may cause archetype fragmentation",
+      "suggestion": "Split into focused queries; fetch additional components only when needed",
+      "effort": "moderate",
+      "expected_improvement": "Better cache locality, fewer archetype iterations"
+    },
+    {
+      "id": "PERF-ECS-002",
+      "name": "entity_id_lookup",
+      "pattern": "\\.iter\\(\\)[\\s\\S]{0,100}\\.find\\([\\s\\S]{0,100}id\\s*==",
+      "category": "ecs",
+      "message": "Linear search for entity by ID — maintain index HashMap",
+      "suggestion": "Keep HashMap<EntityId, Entity> for O(1) lookup by ID",
+      "effort": "moderate",
+      "expected_improvement": "O(n) → O(1) lookup, critical for 1000+ entities"
+    }
+  ]
+}

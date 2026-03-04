@@ -119,7 +119,7 @@ Your AI assistant now has 16 new tools for runtime verification.
 
 ---
 
-## Available Tools (27)
+## Available Tools (30)
 
 ### Build & Verify (16 tools)
 
@@ -171,12 +171,20 @@ Your AI assistant now has 16 new tools for runtime verification.
 | `gdext_scaffold` | Generate boilerplate for: godot_class, singleton, resource, bridge_class, signal_hub, export_enum |
 | `gdext_version_check` | Check gdext Cargo.toml version vs Godot binary for compatibility warnings |
 
-### GDScript → Rust Migration (2 tools)
+### GDScript → Rust Migration (3 tools)
 
 | Tool | What it does |
 |------|-------------|
 | `migration_scan` | Analyze GDScript files: classify, estimate effort, generate Rust skeleton (detail mode) |
 | `migration_diff` | Compare original GDScript with converted Rust — method coverage and pattern mapping |
+| `migration_validate` | Compare two golden dumps (before/after) for numerical parity within tolerance |
+
+### Performance (2 tools)
+
+| Tool | What it does |
+|------|-------------|
+| `perf_suggest` | Scan Rust code for optimization opportunities — 12 rules across memory, cpu, ffi, ecs |
+| `rust_unsafe_audit` | Audit all unsafe blocks, FFI boundaries, and raw pointers; flags missing SAFETY comments |
 
 ---
 

@@ -378,3 +378,25 @@ Add gdext pattern checking, scaffold generation, version compatibility, and GDSc
 - Files added: src/tools/gdext.py, src/tools/migration.py, src/rules/gdext_rules.json, src/rules/migration_map.json, tests/test_phase2_tools.py
 - Files modified: src/server.py, README.md
 - New tools: gdext_check, gdext_scaffold, gdext_version_check, migration_scan, migration_diff
+
+---
+
+## Phase 3: Performance + Audit Tools (Tickets P3-1 to P3-7)
+
+### Context
+Add performance optimization suggestions, unsafe code auditing, and golden-dump validation.
+
+### Tickets
+| # | Title | File | Action |
+|---|-------|------|--------|
+| P3-1 | perf_rules.json (12 rules) | src/rules/perf_rules.json | 🔴 DIRECT |
+| P3-2 | perf_suggest, rust_unsafe_audit, migration_validate | src/tools/performance.py | 🔴 DIRECT |
+| P3-3 | Register 3 new tools in server.py | src/server.py | 🔴 DIRECT |
+| P3-4 | Write Phase 3 tests (23 new tests) | tests/test_phase3_tools.py | 🔴 DIRECT |
+| P3-5 | Update README to 30-tool catalog | README.md | 🔴 DIRECT |
+
+### Results
+- Gate: PASS (140 tests total, 0 failures)
+- Files added: src/tools/performance.py, src/rules/perf_rules.json, tests/test_phase3_tools.py
+- Files modified: src/server.py, README.md
+- New tools: perf_suggest, rust_unsafe_audit, migration_validate

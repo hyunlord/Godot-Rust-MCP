@@ -15,6 +15,7 @@ from .tools.structure import project_overview
 from .tools.diagnose import diagnose, build_explain
 from .tools.gdext import gdext_check, gdext_scaffold, gdext_version_check
 from .tools.migration import migration_scan, migration_diff
+from .tools.performance import perf_suggest, rust_unsafe_audit, migration_validate
 
 app = Server("godot-rust-harness")
 ROOT = Path(os.environ.get("PROJECT_ROOT", ".")).resolve()
@@ -596,6 +597,61 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    # ── Domain 5: Performance ─────────────────────────────────────────────────
+    Tool(
+        name="perf_suggest",
+        description=(
+            "Scan Rust code for performance optimization opportunities using a rule DB (12 rules). "
+            "Categories: memory, cpu, ffi, ecs. "
+            "Returns {suggestions: [{file, line, category, message, suggestion, effort, expected_improvement}], summary}."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Relative path to file or directory (default: entire project)"},
+                "focus": {
+                    "type": "string",
+                    "enum": ["all", "memory", "cpu", "ffi", "ecs"],
+                    "description": "Category to focus on (default: all)",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="rust_unsafe_audit",
+        description=(
+            "Audit all unsafe blocks and FFI boundaries in Rust code. "
+            "Reports unsafe blocks (with/without SAFETY comments), extern C boundaries, raw pointers. "
+            "Returns {unsafe_blocks, ffi_boundaries, raw_pointers, summary}."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Relative path to file or directory (default: entire project)"},
+            },
+        },
+    ),
+    Tool(
+        name="migration_validate",
+        description=(
+            "Compare two golden dump snapshots (from godot_golden_dump) for numerical parity. "
+            "Use to verify GDScript→Rust migration produces identical results. "
+            "Returns {passed, diff_count, diffs: [{entity_id, field, before_value, after_value, delta}]}."
+        ),
+        inputSchema={
+            "type": "object",
+            "required": ["before_dump", "after_dump"],
+            "properties": {
+                "before_dump": {"type": "object", "description": "Golden dump from the baseline (e.g. GDScript run)"},
+                "after_dump": {"type": "object", "description": "Golden dump from the new implementation (e.g. Rust run)"},
+                "tolerance": {
+                    "type": "number",
+                    "description": "Floating-point delta tolerance (default 1e-6)",
+                    "default": 1e-6,
+                },
+            },
+        },
+    ),
 ]
 
 
@@ -742,6 +798,19 @@ async def _dispatch(name: str, args: dict) -> dict:
 
         case "migration_diff":
             return migration_diff(ROOT, args.get("gdscript_path", ""), args.get("rust_path", ""))
+
+        case "perf_suggest":
+            return perf_suggest(ROOT, args.get("path", ""), args.get("focus", "all"))
+
+        case "rust_unsafe_audit":
+            return rust_unsafe_audit(ROOT, args.get("path", ""))
+
+        case "migration_validate":
+            return migration_validate(
+                args.get("before_dump", {}),
+                args.get("after_dump", {}),
+                float(args.get("tolerance", 1e-6)),
+            )
 
         case _:
             return {"error": f"Unknown tool: {name!r}"}
