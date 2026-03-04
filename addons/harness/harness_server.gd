@@ -66,15 +66,9 @@ func _process(_delta: float) -> void:
 
 
 func _handle_message(text: String) -> String:
-	# Parse JSON
-	var json_parser: JSON = JSON.new()
-	var parse_err: int = json_parser.parse(text)
-	if parse_err != OK:
+	var data = JSON.parse_string(text)
+	if data == null or typeof(data) != TYPE_DICTIONARY:
 		return _error_response(null, -32700, "Parse error")
-
-	var data = json_parser.get_data()
-	if typeof(data) != TYPE_DICTIONARY:
-		return _error_response(null, -32700, "Parse error: expected object")
 
 	var req_id = data.get("id", null)
 	var method: String = data.get("method", "")

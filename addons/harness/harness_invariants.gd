@@ -42,8 +42,10 @@ func run(name: String) -> Dictionary:
 	var total_passed: int = 0
 	var total_failed: int = 0
 
+	var entities: Array = _get_alive()  # Fetch once for all checks
+
 	for check_name in names_to_run:
-		var violations: Array = _checks[check_name].call()
+		var violations: Array = _checks[check_name].call(entities)
 		var passed: bool = violations.is_empty()
 		if passed:
 			total_passed += 1
@@ -109,8 +111,7 @@ func _check_range(entities: Array, field: String, low: float, high: float, label
 
 # ── Invariant Implementations ──────────────────────────────────────────────────
 
-func _check_needs_bounded() -> Array:
-	var entities: Array = _get_alive()
+func _check_needs_bounded(entities: Array) -> Array:
 	var violations: Array = []
 	for e in entities:
 		if not ("needs" in e):
@@ -130,8 +131,7 @@ func _check_needs_bounded() -> Array:
 	return violations
 
 
-func _check_emotions_bounded() -> Array:
-	var entities: Array = _get_alive()
+func _check_emotions_bounded(entities: Array) -> Array:
 	var violations: Array = []
 	for e in entities:
 		if not ("emotion_data" in e):
@@ -158,8 +158,7 @@ func _check_emotions_bounded() -> Array:
 	return violations
 
 
-func _check_personality_bounded() -> Array:
-	var entities: Array = _get_alive()
+func _check_personality_bounded(entities: Array) -> Array:
 	var violations: Array = []
 	for e in entities:
 		if not ("personality_data" in e):
@@ -186,25 +185,11 @@ func _check_personality_bounded() -> Array:
 	return violations
 
 
-func _check_health_bounded() -> Array:
-	var entities: Array = _get_alive()
-	var violations: Array = []
-	for e in entities:
-		if not ("health" in e):
-			continue
-		var v = e.health
-		if (typeof(v) == TYPE_FLOAT or typeof(v) == TYPE_INT) and (v < 0.0 or v > 1.0):
-			violations.append({
-				"entity_id": e.id,
-				"field": "health",
-				"value": v,
-				"expected": "[0.0, 1.0]",
-			})
-	return violations
+func _check_health_bounded(entities: Array) -> Array:
+	return _check_range(entities, "health", 0.0, 1.0, "health")
 
 
-func _check_age_non_negative() -> Array:
-	var entities: Array = _get_alive()
+func _check_age_non_negative(entities: Array) -> Array:
 	var violations: Array = []
 	for e in entities:
 		if not ("age" in e):
@@ -220,8 +205,7 @@ func _check_age_non_negative() -> Array:
 	return violations
 
 
-func _check_stress_non_negative() -> Array:
-	var entities: Array = _get_alive()
+func _check_stress_non_negative(entities: Array) -> Array:
 	var violations: Array = []
 	for e in entities:
 		var stress_val = null
@@ -241,8 +225,7 @@ func _check_stress_non_negative() -> Array:
 	return violations
 
 
-func _check_no_duplicate_traits() -> Array:
-	var entities: Array = _get_alive()
+func _check_no_duplicate_traits(entities: Array) -> Array:
 	var violations: Array = []
 	for e in entities:
 		if not ("active_traits" in e):

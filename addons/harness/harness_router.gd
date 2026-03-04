@@ -4,6 +4,8 @@ extends Node
 ## Instantiated as a child of HarnessServer. Routes all WebSocket commands.
 
 const TICK_METHODS: Array = ["process_single_tick", "_process_tick", "step"]
+const ENGINE_PATHS: Array = ["/root/SimulationEngine", "/root/SimEngine", "/root/Simulation",
+							  "/root/GameManager", "/root/World"]
 
 var _tick_counter: int = 0
 var _engine = null  # Lazily resolved SimulationEngine reference
@@ -39,8 +41,7 @@ func _err(code: int, message: String) -> Dictionary:
 func _get_engine():
 	if _engine != null and is_instance_valid(_engine):
 		return _engine
-	for candidate in ["/root/SimulationEngine", "/root/SimEngine", "/root/Simulation",
-					   "/root/GameManager", "/root/World"]:
+	for candidate in ENGINE_PATHS:
 		var node = get_node_or_null(candidate)
 		if node != null:
 			_engine = node
@@ -48,12 +49,21 @@ func _get_engine():
 	return null
 
 
-func _call_tick_on_engine(engine) -> bool:
-	for method_name in TICK_METHODS:
-		if engine.has_method(method_name):
-			engine.call(method_name)
-			return true
-	return false
+func _get_entity_by_id(mgr, id: int):
+	if mgr.has_method("get_entity_by_id"):
+		return mgr.get_entity_by_id(id)
+	if mgr.has_method("get_all_entities"):
+		for e in mgr.get_all_entities():
+			if e.id == id:
+				return e
+	return null
+
+
+func _resolve_tick_method(engine) -> String:
+	for m in TICK_METHODS:
+		if engine.has_method(m):
+			return m
+	return ""
 
 
 func _get_entity_manager():
@@ -81,25 +91,18 @@ func _cmd_tick(params: Dictionary) -> Dictionary:
 	var n: int = clampi(params.get("n", 1), 1, 100000)
 	var engine = _get_engine()
 	if engine == null:
-		return _err(-32000, (
-			"SimulationEngine not found. Tried: /root/SimulationEngine, /root/SimEngine, "
-			"/root/Simulation, /root/GameManager, /root/World."
-		))
+		return _err(-32000,
+			"SimulationEngine not found. Tried: %s." % ", ".join(ENGINE_PATHS))
 
-	# Verify tick method exists before looping
-	var has_tick: bool = false
-	for m in TICK_METHODS:
-		if engine.has_method(m):
-			has_tick = true
-			break
-	if not has_tick:
+	var tick_method: String = _resolve_tick_method(engine)
+	if tick_method == "":
 		return _err(-32000,
 			"SimulationEngine has no tick method. Expected one of: %s" % ", ".join(TICK_METHODS)
 		)
 
 	var t_start: int = Time.get_ticks_usec()
 	for _i in range(n):
-		_call_tick_on_engine(engine)
+		engine.call(tick_method)
 		_tick_counter += 1
 	var elapsed_ms: float = (Time.get_ticks_usec() - t_start) / 1000.0
 
@@ -155,15 +158,7 @@ func _cmd_query(params: Dictionary) -> Dictionary:
 		if mgr == null:
 			return _err(-32000, "EntityManager not found at /root/EntityManager")
 
-		var entity = null
-		if mgr.has_method("get_entity_by_id"):
-			entity = mgr.get_entity_by_id(target_id)
-		elif mgr.has_method("get_all_entities"):
-			for e in mgr.get_all_entities():
-				if e.id == target_id:
-					entity = e
-					break
-
+		var entity = _get_entity_by_id(mgr, target_id)
 		if entity == null:
 			return _err(-32602, "Entity not found: id=%d" % target_id)
 		return _ok(_serialize_entity_full(entity))
@@ -247,10 +242,8 @@ func _cmd_reset(params: Dictionary) -> Dictionary:
 	var engine = _get_engine()
 
 	if engine == null:
-		return _err(-32000, (
-			"SimulationEngine not found. Cannot reset. Tried: /root/SimulationEngine, "
-			"/root/SimEngine, /root/Simulation, /root/GameManager, /root/World."
-		))
+		return _err(-32000,
+			"SimulationEngine not found. Cannot reset. Tried: %s." % ", ".join(ENGINE_PATHS))
 
 	if engine.has_method("reset"):
 		engine.reset(seed, agents)
@@ -271,24 +264,20 @@ func _cmd_bench(params: Dictionary) -> Dictionary:
 	if engine == null:
 		return _err(-32000, "SimulationEngine not found")
 
-	var has_tick: bool = false
-	for m in TICK_METHODS:
-		if engine.has_method(m):
-			has_tick = true
-			break
-	if not has_tick:
+	var tick_method: String = _resolve_tick_method(engine)
+	if tick_method == "":
 		return _err(-32000, "SimulationEngine has no tick method")
 
 	# Warmup (not measured)
 	for _i in range(warmup):
-		_call_tick_on_engine(engine)
+		engine.call(tick_method)
 		_tick_counter += 1
 
 	# Measure each tick individually
 	var times: Array = []
 	for _i in range(n):
 		var t_start: int = Time.get_ticks_usec()
-		_call_tick_on_engine(engine)
+		engine.call(tick_method)
 		_tick_counter += 1
 		times.append((Time.get_ticks_usec() - t_start) / 1000.0)  # ms
 
@@ -321,15 +310,7 @@ func _cmd_force_event(params: Dictionary) -> Dictionary:
 	if mgr == null:
 		return _err(-32000, "EntityManager not found")
 
-	var entity = null
-	if mgr.has_method("get_entity_by_id"):
-		entity = mgr.get_entity_by_id(entity_id)
-	elif mgr.has_method("get_all_entities"):
-		for e in mgr.get_all_entities():
-			if e.id == entity_id:
-				entity = e
-				break
-
+	var entity = _get_entity_by_id(mgr, entity_id)
 	if entity == null:
 		return _err(-32602, "Entity not found: id=%d" % entity_id)
 

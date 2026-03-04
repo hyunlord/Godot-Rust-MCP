@@ -48,14 +48,7 @@ async def _godot_start(port: int = 9877) -> dict:
         return {"status": "already_running", "port": port}
 
     # Kill stale process if any
-    if _godot_proc is not None:
-        try:
-            _godot_proc.terminate()
-            _godot_proc.wait(timeout=5)
-        except Exception:
-            pass
-        _godot_proc = None
-        _godot = None
+    await _godot_stop()
 
     godot_bin = os.environ.get("GODOT_BIN", "godot")
 
