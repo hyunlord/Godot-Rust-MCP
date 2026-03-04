@@ -3,6 +3,7 @@
     "godot-rust-harness": {
       "command": "python",
       "args": ["-m", "src.server"],
+      "cwd": "${CLAUDE_PLUGIN_ROOT}",
       "env": {
         "PROJECT_ROOT": "."
       }

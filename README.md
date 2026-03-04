@@ -50,26 +50,46 @@ The Godot side is a lightweight addon (`addons/harness/`) that **only activates 
 
 ## Quick Start
 
-### 1. Install the addon in your Godot project
+### Option A: Claude Code Plugin (Recommended)
 
-```bash
-# Clone this repo
-git clone https://github.com/hyunlord/Godot-Rust-MCP.git
-
-# Copy the addon to your Godot project
-cp -r Godot-Rust-MCP/addons/harness/ /path/to/your/godot-project/addons/
-
-# Install Python dependencies
-pip install -r Godot-Rust-MCP/requirements.txt
+```
+/plugin install godot-rust-harness@https://github.com/hyunlord/Godot-Rust-MCP
 ```
 
-### 2. Register the Autoload
+Then set up the Godot addon in your project:
+
+```
+/godot-rust-harness:setup /path/to/your/godot-project
+```
+
+That's it. 16 tools are now available in Claude Code.
+
+### Option B: Manual Setup
+
+<details>
+<summary>Click to expand manual installation steps</summary>
+
+#### 1. Clone and install dependencies
+
+```bash
+git clone https://github.com/hyunlord/Godot-Rust-MCP.git
+cd Godot-Rust-MCP
+pip install -r requirements.txt
+```
+
+#### 2. Copy the addon to your Godot project
+
+```bash
+cp -r addons/harness/ /path/to/your/godot-project/addons/
+```
+
+#### 3. Register the Autoload
 
 In your Godot project: **Project → Project Settings → Autoload**
 
 Add `res://addons/harness/harness_server.gd` as **HarnessServer** and enable it.
 
-### 3. Add to your AI tool
+#### 4. Register the MCP server
 
 Add this to your project's `.mcp.json` (create the file if it doesn't exist):
 
@@ -89,7 +109,9 @@ Add this to your project's `.mcp.json` (create the file if it doesn't exist):
 }
 ```
 
-That's it. Your AI assistant now has 16 new tools for runtime verification.
+</details>
+
+Your AI assistant now has 16 new tools for runtime verification.
 
 ---
 

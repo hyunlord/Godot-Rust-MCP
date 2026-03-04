@@ -170,3 +170,52 @@ Work log for the godot-rust-harness MCP plugin implementation.
 ### Confirmed limitations
 - No screenshots or GIF demos (terminal recording would strengthen discoverability)
 - `icon.png` still absent (Asset Library submission prerequisite)
+
+---
+
+## Session 6 — 2026-03-04
+
+### Status: COMPLETE ✅
+
+### Context
+Add Claude Code plugin system support so users can install with `/plugin install` instead of 5 manual steps.
+
+### Tickets
+| # | Title | File | Action | Depends on |
+|---|-------|------|--------|------------|
+| P-001 | Create plugin manifest | `.claude-plugin/plugin.json` | 🟢 DISPATCH | — |
+| P-002 | Create setup command | `commands/setup.md` | 🟢 DISPATCH | — |
+| P-003 | Fix .mcp.json for plugin cache | `.mcp.json` | 🔴 DIRECT | — |
+| P-004 | Update README Quick Start | `README.md` | 🟢 DISPATCH | P-001 |
+| P-005 | Update PROGRESS.md | `PROGRESS.md` | 🔴 DIRECT | ALL |
+
+### Dispatch ratio: 3/5 = 60% ✅
+
+### Completed
+- [x] P-001 `.claude-plugin/plugin.json` — plugin manifest with name, version, description, author, repo, license, keywords
+- [x] P-002 `commands/setup.md` — `/godot-rust-harness:setup [project-path]` command that copies addon, checks Autoload, installs pip deps, and guides PROJECT_ROOT config
+- [x] P-003 `.mcp.json` — added `"cwd": "${CLAUDE_PLUGIN_ROOT}"` so server finds `src/` when installed to plugin cache
+- [x] P-004 `README.md` — Quick Start now has Option A (plugin, 2 commands) + Option B (manual, collapsible `<details>`)
+- [x] P-005 `PROGRESS.md` — this entry
+
+### Gate results
+- `plugin.json` valid JSON + correct name: ✅
+- `commands/setup.md` exists + has frontmatter: ✅
+- `.mcp.json` has `cwd: "${CLAUDE_PLUGIN_ROOT}"`: ✅
+- README has `/plugin install`: ✅
+- README has Option A / Option B / `<details>` collapse: ✅
+- pytest: ✅ 54 passed in 1.55s (no regressions)
+
+### Key technical decision
+Used `${CLAUDE_PLUGIN_ROOT}` (official Claude Code variable) instead of `${PLUGIN_DIR}` (spec guess). Confirmed via official plugin reference docs — this variable is explicitly supported for MCP server `cwd` and `command` paths.
+
+### Changes summary
+- `/plugin install godot-rust-harness@https://github.com/hyunlord/Godot-Rust-MCP` → auto-registers MCP server, all 16 tools available immediately
+- `/godot-rust-harness:setup /path/to/project` → copies addon, checks Autoload, installs deps, sets PROJECT_ROOT
+- Manual setup preserved in collapsed `<details>` block for non-plugin-system users
+- `cwd: "${CLAUDE_PLUGIN_ROOT}"` ensures `python -m src.server` finds the `src/` package regardless of installation directory
+
+### Confirmed limitations
+- Godot Autoload registration still requires manual step in Godot editor (no API to automate this)
+- pip dependency auto-install not possible via plugin `postinstall` hook (no such event exists); setup command handles it instead
+- Live `/plugin install` test requires pushing to GitHub and testing in fresh Claude Code session
