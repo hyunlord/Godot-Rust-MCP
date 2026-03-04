@@ -52,17 +52,21 @@ The Godot side is a lightweight addon (`addons/harness/`) that **only activates 
 
 ### Option A: Claude Code Plugin (Recommended)
 
-```
-/plugin install godot-rust-harness@https://github.com/hyunlord/Godot-Rust-MCP
-```
-
-Then set up the Godot addon in your project:
+**Step 1: Add the marketplace**
 
 ```
-/godot-rust-harness:setup /path/to/your/godot-project
+/plugin marketplace add https://github.com/hyunlord/Godot-Rust-MCP
 ```
 
-That's it. 16 tools are now available in Claude Code.
+**Step 2: Install the plugin**
+
+```
+/plugin install godot-rust-harness
+```
+
+That's it. When your AI assistant first calls `godot_start`, the Godot addon is
+automatically installed in your project and the Autoload is registered. No manual
+setup required.
 
 ### Option B: Manual Setup
 

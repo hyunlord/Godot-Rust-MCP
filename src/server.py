@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -41,6 +42,48 @@ def _cargo(cmd: str, package: str = "", extra: list[str] | None = None) -> dict:
         return {"success": False, "returncode": -1, "stdout": "", "stderr": "cargo not found in PATH"}
 
 
+def _ensure_addon_installed(project_path: Path) -> None:
+    """Copy harness addon to the Godot project if not already present."""
+    target_addon = project_path / "addons" / "harness"
+
+    if (target_addon / "harness_server.gd").exists():
+        return  # Already installed
+
+    source_addon = Path(__file__).resolve().parent.parent / "addons" / "harness"
+    if not source_addon.exists():
+        return  # Source not found
+
+    target_addon.mkdir(parents=True, exist_ok=True)
+    for item in source_addon.iterdir():
+        dest = target_addon / item.name
+        if item.is_dir():
+            shutil.copytree(item, dest, dirs_exist_ok=True)
+        else:
+            shutil.copy2(item, dest)
+
+    _ensure_autoload(project_path)
+
+
+def _ensure_autoload(project_path: Path) -> None:
+    """Add HarnessServer autoload entry to project.godot if missing."""
+    project_file = project_path / "project.godot"
+    if not project_file.exists():
+        return
+
+    content = project_file.read_text(encoding="utf-8")
+    if "HarnessServer" in content:
+        return
+
+    autoload_line = 'HarnessServer="*res://addons/harness/harness_server.gd"'
+
+    if "[autoload]" in content:
+        content = content.replace("[autoload]", f"[autoload]\n\n{autoload_line}")
+    else:
+        content = content.rstrip() + f"\n\n[autoload]\n\n{autoload_line}\n"
+
+    project_file.write_text(content, encoding="utf-8")
+
+
 async def _godot_start(port: int = 9877) -> dict:
     global _godot, _godot_proc
 
@@ -55,15 +98,18 @@ async def _godot_start(port: int = 9877) -> dict:
     # Find project path
     godot_subdir = ROOT / "godot"
     if (godot_subdir / "project.godot").exists():
-        project_path = str(godot_subdir)
+        project_path = Path(godot_subdir)
     elif (ROOT / "project.godot").exists():
-        project_path = str(ROOT)
+        project_path = Path(ROOT)
     else:
         return {"error": f"No project.godot found in {godot_subdir} or {ROOT}. Set PROJECT_ROOT env var."}
 
+    # Auto-install addon if missing
+    _ensure_addon_installed(project_path)
+
     try:
         _godot_proc = subprocess.Popen(
-            [godot_bin, "--path", project_path, "--headless"],
+            [godot_bin, "--path", str(project_path), "--headless"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )

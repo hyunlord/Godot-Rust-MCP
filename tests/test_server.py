@@ -431,3 +431,84 @@ class TestVerifyClippy:
         assert result["passed"] is False
         assert result["failed_at"] == "test"
         assert "clippy" in result["steps"]
+
+
+# ── _ensure_addon_installed() / _ensure_autoload() tests ───────────────────────
+
+class TestEnsureAddonInstalled:
+    def test_copies_files(self, tmp_path):
+        project = tmp_path / "my_game"
+        project.mkdir()
+        (project / "project.godot").write_text("[gd_scene]\n[application]\n")
+
+        srv._ensure_addon_installed(project)
+
+        addon = project / "addons" / "harness"
+        assert (addon / "harness_server.gd").exists()
+        assert (addon / "plugin.cfg").exists()
+        assert (addon / "harness_router.gd").exists()
+        assert (addon / "harness_invariants.gd").exists()
+
+    def test_idempotent(self, tmp_path):
+        project = tmp_path / "my_game"
+        project.mkdir()
+        (project / "project.godot").write_text("[gd_scene]\n")
+
+        srv._ensure_addon_installed(project)
+        srv._ensure_addon_installed(project)  # second call must be no-op
+
+        assert (project / "addons" / "harness" / "harness_server.gd").exists()
+
+    def test_skips_if_present(self, tmp_path):
+        project = tmp_path / "my_game"
+        addon = project / "addons" / "harness"
+        addon.mkdir(parents=True)
+        custom_content = "# my custom version"
+        (addon / "harness_server.gd").write_text(custom_content)
+
+        srv._ensure_addon_installed(project)
+
+        assert (addon / "harness_server.gd").read_text() == custom_content
+
+
+class TestEnsureAutoload:
+    def test_adds_section(self, tmp_path):
+        project = tmp_path / "my_game"
+        project.mkdir()
+        (project / "project.godot").write_text(
+            '[gd_scene]\n\n[application]\nconfig/name="Test"\n'
+        )
+
+        srv._ensure_autoload(project)
+
+        content = (project / "project.godot").read_text()
+        assert "[autoload]" in content
+        assert "HarnessServer" in content
+        assert "res://addons/harness/harness_server.gd" in content
+
+    def test_appends_to_existing(self, tmp_path):
+        project = tmp_path / "my_game"
+        project.mkdir()
+        (project / "project.godot").write_text(
+            '[gd_scene]\n\n[autoload]\n\nMyNode="*res://my_node.gd"\n'
+        )
+
+        srv._ensure_autoload(project)
+
+        content = (project / "project.godot").read_text()
+        assert "HarnessServer" in content
+        assert "MyNode" in content  # Existing entry preserved
+
+    def test_skips_if_present(self, tmp_path):
+        project = tmp_path / "my_game"
+        project.mkdir()
+        original = (
+            '[gd_scene]\n\n[autoload]\n\n'
+            'HarnessServer="*res://addons/harness/harness_server.gd"\n'
+        )
+        (project / "project.godot").write_text(original)
+
+        srv._ensure_autoload(project)
+
+        content = (project / "project.godot").read_text()
+        assert content.count("HarnessServer") == 1  # Not duplicated

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "godot-rust-harness",
+  "version": "1.0.0",
+  "description": "Runtime verification for Godot+Rust projects. Launch Godot headless, advance ticks, query entities, run invariant checks, benchmark performance.",
+  "owner": {
+    "name": "hyunlord"
+  },
+  "plugins": [
+    {
+      "name": "godot-rust-harness",
+      "description": "MCP server + Godot addon for AI-assisted runtime verification of Godot+Rust simulation projects. 16 tools including verify(), tick, snapshot, invariant checks, and benchmarking.",
+      "source": ".",
+      "category": "development"
+    }
+  ]
+}

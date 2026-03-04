@@ -219,3 +219,113 @@ Used `${CLAUDE_PLUGIN_ROOT}` (official Claude Code variable) instead of `${PLUGI
 - Godot Autoload registration still requires manual step in Godot editor (no API to automate this)
 - pip dependency auto-install not possible via plugin `postinstall` hook (no such event exists); setup command handles it instead
 - Live `/plugin install` test requires pushing to GitHub and testing in fresh Claude Code session
+
+---
+
+## marketplace.json 추가 — M-001~M-003
+
+### Context
+`.claude-plugin/marketplace.json` 추가로 `/plugin marketplace add` + `/plugin install` 2줄 설치 지원.
+
+### Tickets
+| # | Title | File | Action | Depends on |
+|---|-------|------|--------|------------|
+| M-001 | Create marketplace.json | `.claude-plugin/marketplace.json` | 🟢 DISPATCH | — |
+| M-002 | Update README Option A | `README.md` | 🟢 DISPATCH | — |
+| M-003 | Update PROGRESS.md | `PROGRESS.md` | 🔴 DIRECT | ALL |
+
+### Dispatch ratio: 2/3 = 67% ✅
+
+### Results
+- Gate: PASS
+- Files changed: 3 (marketplace.json 신규, README.md 수정, PROGRESS.md 수정)
+- pytest: 54 passed (no regressions)
+
+---
+
+## 구현 완료 보고
+
+### 구현 의도
+`/plugin marketplace add` + `/plugin install` 2줄 설치 지원
+
+### 구현 내용
+- `.claude-plugin/marketplace.json` 추가 (마켓플레이스 매니페스트)
+- `README.md` Option A 수정 (marketplace add + install 방식)
+
+### 구현 방법
+oh-my-claudecode와 동일한 패턴:
+레포 자체를 마켓플레이스로 등록, `source: "."` 로 루트를 플러그인으로 지정.
+
+### 기능 설명
+사용자가:
+1. `/plugin marketplace add https://github.com/hyunlord/Godot-Rust-MCP`
+2. `/plugin install godot-rust-harness`
+이 2줄로 설치 완료. MCP 서버 자동 등록, 16개 도구 즉시 사용 가능.
+
+### 변경된 파일 목록
+- `.claude-plugin/marketplace.json` — 신규 생성
+- `README.md` — Quick Start > Option A 교체
+- `PROGRESS.md` — 세션 로그 추가
+
+### 확인된 제한사항
+- 실제 라이브 테스트는 GitHub push 후 새 Claude Code 세션에서 진행 필요
+- Godot addon 복사 + Autoload 등록은 여전히 `/godot-rust-harness:setup` 으로 수동
+
+---
+
+## 자동 addon 설치 + marketplace 등록 — A-001~A-007
+
+### Context
+godot_start 호출 시 addon 자동 설치 + Autoload 자동 등록으로 사용자 경험 단순화.
+`/plugin install` 2줄 설치 지원.
+
+### Tickets
+| # | Title | File | Action | Depends |
+|---|-------|------|--------|---------|
+| A-001 | Auto-install addon logic | `src/server.py` | 🟢 DISPATCH | — |
+| A-002 | Auto-install tests | `tests/test_server.py` | 🟢 DISPATCH | A-001 |
+| A-003 | Create marketplace.json | `.claude-plugin/marketplace.json` | 🟢 DISPATCH | — |
+| A-004 | Delete setup command | `commands/setup.md`, `commands/` | 🔴 DIRECT | — |
+| A-005 | Update plugin.json | `.claude-plugin/plugin.json` | 🔴 DIRECT | — |
+| A-006 | Update README Quick Start | `README.md` | 🟢 DISPATCH | — |
+| A-007 | Update PROGRESS.md | `PROGRESS.md` | 🔴 DIRECT | ALL |
+
+### Dispatch ratio: 4/7 = 57% (A-004, A-005 trivial/direct justified)
+
+### Results
+- Gate: PASS
+- pytest: 60 passed (54 original + 6 new)
+- Files changed: src/server.py, tests/test_server.py, .claude-plugin/marketplace.json, README.md, PROGRESS.md
+- Deleted: commands/setup.md, commands/
+
+---
+
+## 구현 완료 보고
+
+### 구현 의도
+godot_start 호출 시 addon 자동 설치 + 마켓플레이스 등록으로 사용자 경험 단순화
+
+### 구현 내용
+- `src/server.py`: `_ensure_addon_installed()` + `_ensure_autoload()` 추가
+  → godot_start 시 addons/harness/ 없으면 자동 복사 + project.godot에 Autoload 등록
+- `.claude-plugin/marketplace.json`: 마켓플레이스 매니페스트 (이미 존재)
+- `commands/setup.md`: 삭제 (자동 설치로 대체)
+- `README.md`: Quick Start에서 setup 커맨드 제거, "자동 설치" 메시지 추가
+- `tests/test_server.py`: 자동 설치 관련 테스트 6개 추가
+
+### 구현 방법
+- addon 설치: shutil.copy2로 파일별 복사, harness_server.gd 존재 여부로 설치 판단
+- Autoload 등록: project.godot를 텍스트로 읽어서 [autoload] 섹션에 항목 추가
+- 멱등성: 이미 존재하면 스킵, 기존 파일 절대 덮어쓰지 않음
+
+### 기능 설명
+사용자 경험:
+1. /plugin marketplace add https://github.com/hyunlord/Godot-Rust-MCP
+2. /plugin install godot-rust-harness
+3. godot_start 호출 → addon 자동 설치 → 바로 사용
+수동 파일 복사, Autoload 등록 불필요.
+
+### 확인된 제한사항
+- project.godot INI 파싱이 단순 문자열 치환이므로 극단적 edge case에서 깨질 수 있음
+  (예: 주석 안에 [autoload]가 있는 경우 — 실제로는 거의 발생 안 함)
+- 기존 harness 파일이 있으면 업데이트 안 함 (의도적 — 사용자 수정 보존)
