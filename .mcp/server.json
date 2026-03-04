@@ -1,0 +1,37 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.hyunlord/godot-rust-harness",
+  "title": "Godot Rust Harness",
+  "description": "MCP server for AI-assisted runtime verification of Godot+Rust simulation projects. Launch Godot headless, advance ticks, query entities, run invariant checks, benchmark performance.",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/hyunlord/Godot-Rust-MCP",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "godot-rust-harness",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "PROJECT_ROOT",
+          "description": "Root directory of the Godot+Rust project",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "GODOT_BIN",
+          "description": "Path to Godot 4.x binary",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

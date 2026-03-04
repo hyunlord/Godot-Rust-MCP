@@ -1,3 +1,8 @@
+[![Tests](https://github.com/hyunlord/Godot-Rust-MCP/actions/workflows/test.yml/badge.svg)](https://github.com/hyunlord/Godot-Rust-MCP/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Godot 4.x](https://img.shields.io/badge/Godot-4.x-blue.svg)](https://godotengine.org/)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
+
 # godot-rust-harness
 
 MCP plugin that gives AI coding agents (Claude Code, Codex) the ability to launch Godot headless, advance simulation ticks, query entity state, run invariant checks, and benchmark performance — all from within the tool-calling interface.
@@ -99,12 +104,15 @@ export GODOT_BIN=/path/to/godot4
 | `godot_invariant` | `name=""` | Run invariant checks (all or one) |
 | `godot_reset` | `seed=42, agents=50` | Reset simulation deterministically |
 | `godot_bench` | `n=100, warmup=10` | Benchmark tick performance |
+| `godot_force_event` | `entity_id, event_type, params` | Inject event on specific entity |
+| `godot_set_config` | `key, value` | Change simulation config at runtime |
+| `godot_golden_dump` | `path, tag` | Dump full state to JSON for regression testing |
 
 ### Composite tool
 
 | Tool | Description |
 |------|-------------|
-| `verify` | Build → test → start → reset → tick → invariant → stop |
+| `verify` | Build → clippy → test → start → reset → tick → invariant → stop |
 
 ## Invariants
 

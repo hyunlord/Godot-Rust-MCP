@@ -1,0 +1,13 @@
+# Exclude from Godot Asset Library / GitHub ZIP downloads
+tests/ export-ignore
+examples/ export-ignore
+.github/ export-ignore
+.mcp/ export-ignore
+docs/ export-ignore
+PROGRESS.md export-ignore
+CLAUDE.md export-ignore
+AGENTS.md export-ignore
+pyproject.toml export-ignore
+requirements.txt export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore

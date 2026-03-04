@@ -93,3 +93,44 @@ Work log for the godot-rust-harness MCP plugin implementation.
 - Adapter discovery: `_find_adapter()` scans for `*_adapter.gd`, skips `example_adapter.gd`
 - Any project can integrate by copying the example adapter and filling in method bodies
 - Docs generalized: README has full adapter guide, CLAUDE.md/AGENTS.md purged of WorldSim
+
+---
+
+## Session 4 — 2026-03-04
+
+### Status: COMPLETE ✅
+
+### Completed
+- [x] R-001 `LICENSE` — MIT license at repo root
+- [x] R-002 `addons/harness/LICENSE` — copy for Godot Asset Library compliance
+- [x] R-003 `.gitattributes` — export-ignore for tests/examples/docs/CI
+- [x] R-004 `.mcp/server.json` — MCP Registry manifest
+- [x] R-005 `addons/harness/README.md` — minimal addon README for Asset Library
+- [x] R-006 `docs/PUBLISHING.md` — step-by-step guide for Godot Asset Library + MCP Registry
+- [x] R-007 `README.md` — 4 badges, 3 new tools in table, clippy in verify description
+- [x] R-008 `PROGRESS.md` — this entry
+
+### Gate results
+- `LICENSE` at repo root: ✅
+- `addons/harness/LICENSE` (copy): ✅
+- `.gitattributes` with export-ignore rules: ✅
+- `.mcp/server.json` valid JSON: ✅
+- `docs/PUBLISHING.md` exists: ✅
+- `addons/harness/README.md` exists: ✅
+- README badges present: ✅
+- README simulation tools table: 10 rows (7 original + 3 new) ✅
+- README verify mentions clippy: ✅
+- pytest: ✅ 54 passed
+
+### Changes summary
+- MIT LICENSE enables legal use, forking, and redistribution
+- `.gitattributes` ensures clean Godot Asset Library ZIP (addon + src only)
+- `.mcp/server.json` manifest ready for `mcp-publisher publish` once on PyPI
+- `docs/PUBLISHING.md` documents full submission workflow for both registries
+- `addons/harness/` now Asset Library compliant (LICENSE + README inside addon dir)
+- README badges surface CI health and license at a glance
+
+### Confirmed limitations
+- `icon.png` not yet created (required for Godot Asset Library; 128×128 PNG)
+- PyPI publish required before MCP Registry listing
+- Actual registry submissions are manual steps (require accounts/tokens)
