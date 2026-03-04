@@ -134,3 +134,39 @@ Work log for the godot-rust-harness MCP plugin implementation.
 - `icon.png` not yet created (required for Godot Asset Library; 128×128 PNG)
 - PyPI publish required before MCP Registry listing
 - Actual registry submissions are manual steps (require accounts/tokens)
+
+---
+
+## Session 5 — 2026-03-04
+
+### Status: COMPLETE ✅
+
+### Completed
+- [x] D-001 `README.md` — complete rewrite for first-time Godot+Rust visitors
+- [x] D-002 `PROGRESS.md` — this entry
+
+### Gate results
+- New intro ("Your AI coding assistant can't press F5"): ✅
+- Quick Start section: ✅
+- Zero Impact section: ✅
+- Plain language tables ("What it does"): ✅
+- Invariant table ("What it catches"): ✅
+- No "Plutchik" jargon: ✅
+- No "HEXACO" jargon: ✅
+- Badges still present at top: ✅
+- pytest: ✅ 54 passed
+
+### Changes summary
+- README completely rewritten (~200 lines) — problem-first framing
+- Opens with "Your AI coding assistant can't press F5" hook
+- Quick Start reduced from 5 steps to 3 steps
+- Tool tables use plain "What it does" language instead of terse descriptions
+- Invariant table says "What it catches" — no project-specific field names
+- Adapter section shows real filled-in GDScript example, not just API signatures
+- "Zero Impact" section reassures visitors their game is unaffected
+- Architecture diagram uses plain language
+- License moved to bottom of page
+
+### Confirmed limitations
+- No screenshots or GIF demos (terminal recording would strengthen discoverability)
+- `icon.png` still absent (Asset Library submission prerequisite)

@@ -5,41 +5,73 @@
 
 # godot-rust-harness
 
-MCP plugin that gives AI coding agents (Claude Code, Codex) the ability to launch Godot headless, advance simulation ticks, query entity state, run invariant checks, and benchmark performance — all from within the tool-calling interface.
+**Your AI coding assistant can't press F5.** It can run `cargo build` and `cargo test`, but it can't launch your Godot game, advance 100 simulation ticks, and check whether entity health values went negative.
 
-## Why
+This plugin gives AI tools like [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [Codex](https://openai.com/index/codex/) the ability to:
 
-After writing Godot+Rust simulation code, agents can run `cargo build` and `cargo test` but cannot verify runtime behavior. This plugin eliminates that gap:
+- 🚀 **Launch Godot headless** and connect to it programmatically
+- ⏩ **Advance simulation ticks** and read entity state
+- ✅ **Run runtime checks** (are values in bounds? any crashes?)
+- 📊 **Benchmark performance** (did this change make ticks slower?)
+- 🔄 **Full pipeline in one call** — build → lint → test → launch → check → stop
 
-- Does the simulation crash at runtime?
-- Are entity values staying within valid bounds after 100 ticks?
-- Did a code change cause a performance regression?
-- Is the scene tree correctly structured?
+> **One command. Zero manual testing.**
+>
+> ```
+> verify(package="my_crate", seed=42, agents=50, ticks=100)
+> → { "passed": true, "failed_at": null }
+> ```
 
-## Architecture
+---
+
+## How It Works
 
 ```
-Claude Code (MCP client)
-    ↓ tool calls
-src/server.py (MCP server, Python)
-    ↓ JSON-RPC 2.0 over WebSocket
-addons/harness/harness_server.gd (Godot autoload)
-    ↓
-addons/harness/harness_router.gd (command dispatcher)
-addons/harness/harness_invariants.gd (invariant checks)
+Your AI assistant (Claude Code, Codex, etc.)
+    │
+    │  calls tools like: rust_build, godot_tick, godot_invariant
+    │
+    ▼
+Python server (src/server.py)
+    │
+    ├─ cargo build / test / clippy    ← runs locally
+    │
+    └─ WebSocket → Godot (headless)   ← launches automatically
+                   │
+                   ├─ advance ticks
+                   ├─ read entity data
+                   ├─ run runtime checks
+                   └─ measure performance
 ```
 
-## Installation
+The Godot side is a lightweight addon (`addons/harness/`) that **only activates in headless mode**. Normal gameplay is completely unaffected.
 
-### 1. Install Python dependencies
+---
+
+## Quick Start
+
+### 1. Install the addon in your Godot project
 
 ```bash
-pip install -r requirements.txt
+# Clone this repo
+git clone https://github.com/hyunlord/Godot-Rust-MCP.git
+
+# Copy the addon to your Godot project
+cp -r Godot-Rust-MCP/addons/harness/ /path/to/your/godot-project/addons/
+
+# Install Python dependencies
+pip install -r Godot-Rust-MCP/requirements.txt
 ```
 
-### 2. Register MCP server with Claude Code
+### 2. Register the Autoload
 
-The `.mcp.json` file in this repo registers the server. Set `PROJECT_ROOT` to your Godot+Rust project root:
+In your Godot project: **Project → Project Settings → Autoload**
+
+Add `res://addons/harness/harness_server.gd` as **HarnessServer** and enable it.
+
+### 3. Add to your AI tool
+
+Add this to your project's `.mcp.json` (create the file if it doesn't exist):
 
 ```json
 {
@@ -47,201 +79,185 @@ The `.mcp.json` file in this repo registers the server. Set `PROJECT_ROOT` to yo
     "godot-rust-harness": {
       "command": "python",
       "args": ["-m", "src.server"],
+      "cwd": "/path/to/Godot-Rust-MCP",
       "env": {
-        "PROJECT_ROOT": "/path/to/your/project"
+        "PROJECT_ROOT": "/path/to/your/godot-rust-project",
+        "GODOT_BIN": "godot"
       }
     }
   }
 }
 ```
 
-### 3. Install the Godot addon
+That's it. Your AI assistant now has 16 new tools for runtime verification.
 
-Copy `addons/harness/` into your Godot project:
+---
 
-```bash
-cp -r addons/harness/ /path/to/your/godot-project/addons/
-```
+## Available Tools (16)
 
-### 4. Register as Autoload
+### Build & Lint
 
-In your Godot project: **Project → Project Settings → Autoload**
-
-- Add `res://addons/harness/harness_server.gd` as `HarnessServer`
-- Enable it
-
-### 5. Set GODOT_BIN (if not in PATH)
-
-```bash
-export GODOT_BIN=/path/to/godot4
-```
-
-## Available MCP Tools
-
-### Rust tools
-
-| Tool | Description |
+| Tool | What it does |
 |------|-------------|
-| `rust_build` | `cargo build [-p PKG] [--release]` |
-| `rust_test` | `cargo test [-p PKG] [-- FILTER]` |
-| `rust_clippy` | `cargo clippy -- -D warnings` |
+| `rust_build` | Run `cargo build` (optional: specific crate, release mode) |
+| `rust_test` | Run `cargo test` (optional: filter by test name) |
+| `rust_clippy` | Run `cargo clippy -- -D warnings` |
 
-### Godot lifecycle tools
+### Godot Control
 
-| Tool | Description |
+| Tool | What it does |
 |------|-------------|
-| `godot_start` | Launch Godot headless, connect WebSocket |
-| `godot_stop` | Kill Godot process, close WebSocket |
+| `godot_start` | Launch Godot in headless mode, connect via WebSocket |
+| `godot_stop` | Shut down Godot and close connection |
+| `godot_reset` | Reset simulation with a specific RNG seed and agent count |
 
-### Simulation tools
+### Simulation
 
-| Tool | Params | Description |
-|------|--------|-------------|
-| `godot_tick` | `n=1` | Advance N simulation ticks |
-| `godot_snapshot` | — | Get entity count and first 200 alive entities |
-| `godot_query` | `type, id` | Get full detail of one entity or settlement |
-| `godot_scene_tree` | `depth=3` | Get Godot scene tree as JSON |
-| `godot_invariant` | `name=""` | Run invariant checks (all or one) |
-| `godot_reset` | `seed=42, agents=50` | Reset simulation deterministically |
-| `godot_bench` | `n=100, warmup=10` | Benchmark tick performance |
-| `godot_force_event` | `entity_id, event_type, params` | Inject event on specific entity |
-| `godot_set_config` | `key, value` | Change simulation config at runtime |
-| `godot_golden_dump` | `path, tag` | Dump full state to JSON for regression testing |
-
-### Composite tool
-
-| Tool | Description |
+| Tool | What it does |
 |------|-------------|
-| `verify` | Build → clippy → test → start → reset → tick → invariant → stop |
+| `godot_tick` | Advance the simulation by N ticks |
+| `godot_snapshot` | Get a summary of all alive entities (capped at 200) |
+| `godot_query` | Get full details of one entity or settlement by ID |
+| `godot_scene_tree` | Get the Godot scene tree as JSON |
+| `godot_bench` | Benchmark tick performance (avg, min, max, p95, median) |
 
-## Invariants
+### Testing & Debugging
 
-Seven built-in invariants (all run by default with `name=""`):
+| Tool | What it does |
+|------|-------------|
+| `godot_invariant` | Run runtime checks on entity data |
+| `godot_force_event` | Inject an event on a specific entity |
+| `godot_set_config` | Change a simulation config value at runtime |
+| `godot_golden_dump` | Save full simulation state to a JSON file |
 
-| Name | Checks |
-|------|--------|
-| `needs_bounded` | All need values ∈ [0.0, 1.0] |
-| `emotions_bounded` | Plutchik 8 emotions ∈ [0.0, 1.0] |
-| `personality_bounded` | HEXACO axes ∈ [0.0, 1.0] |
-| `health_bounded` | health ∈ [0.0, 1.0] |
-| `age_non_negative` | age ≥ 0 |
-| `stress_non_negative` | stress_level ≥ 0 |
-| `no_duplicate_traits` | No trait_id appears twice per entity |
+### All-in-One
 
-Add custom invariants by calling `_register(name, callable)` in `harness_invariants.gd`.
+| Tool | What it does |
+|------|-------------|
+| `verify` | Build → clippy → test → start → reset → tick → check → stop |
 
-## Usage Example
+---
 
-```python
-# In Claude Code, the agent calls these tools:
+## Runtime Checks (Invariants)
 
-# 1. Start Godot
-godot_start(port=9877)
+The plugin ships with 7 built-in checks that validate entity data after ticking:
 
-# 2. Reset with deterministic seed
-godot_reset(seed=42, agents=50)
+| Check | What it catches |
+|-------|----------------|
+| `needs_bounded` | Need values outside [0.0, 1.0] |
+| `emotions_bounded` | Emotion values outside [0.0, 1.0] |
+| `personality_bounded` | Personality axis values outside [0.0, 1.0] |
+| `health_bounded` | Health outside [0.0, 1.0] |
+| `age_non_negative` | Negative age values |
+| `stress_non_negative` | Negative stress values |
+| `no_duplicate_traits` | Same trait appearing twice on one entity |
 
-# 3. Run 100 ticks
-godot_tick(n=100)
+These checks work on Dictionary fields returned by your adapter's `serialize_entity_full()` method. You can add your own:
 
-# 4. Check invariants
-godot_invariant(name="")
-# → {"total": 7, "passed": 7, "failed": 0, "results": [...]}
-
-# 5. Run full verification pipeline in one call
-verify(package="my_crate", seed=42, agents=50, ticks=100)
-# → {"passed": true, "failed_at": null, "steps": {...}}
+```gdscript
+# In harness_invariants.gd or your adapter setup:
+_register("my_custom_check", func(entities: Array) -> Array:
+    var violations: Array = []
+    for e in entities:
+        if e.get("mana", 0.0) > 100.0:
+            violations.append({"entity_id": e.id, "field": "mana", "value": e.mana})
+    return violations
+)
 ```
 
-## Writing an Adapter
+---
 
-An adapter bridges your project's specific API to the harness generic interface. Without an adapter, the harness uses generic node discovery. With an adapter, you have full control.
+## Connecting to Your Project (Adapters)
 
-### Quick start
+Out of the box, the harness tries to find your simulation engine at common node paths (`/root/SimulationEngine`, `/root/GameManager`, etc.) and call common tick methods (`step()`, `process_single_tick()`, etc.).
 
-1. Copy the template:
-   ```bash
-   cp examples/example_adapter.gd /path/to/your/project/addons/harness/myproject_adapter.gd
-   ```
+If your project uses different names or patterns, create an **adapter** — a single file that tells the harness how to talk to your code:
 
-2. Fill in the method bodies to match your project's API:
-   ```gdscript
-   func get_engine() -> Object:
-       return get_node_or_null("/root/SimulationEngine")
-
-   func process_ticks(n: int) -> void:
-       for i in range(n):
-           get_engine().step()
-   ```
-
-3. Restart Godot headless — the harness auto-discovers any `*_adapter.gd` file in `addons/harness/`.
-
-The file `example_adapter.gd` is deliberately excluded from auto-discovery. Only files named `*_adapter.gd` (other than `example_adapter.gd`) are loaded.
-
-### Required methods
-
-| Method | Return | Purpose |
-|--------|--------|---------|
-| `get_engine()` | `Object` | Return simulation engine node |
-| `get_entity_manager()` | `Object` | Return entity manager node |
-| `process_ticks(n)` | `void` | Advance N ticks |
-| `get_current_tick()` | `int` | Current tick number |
-| `get_alive_entities()` | `Array` | All alive entity objects |
-| `get_alive_count()` | `int` | Count of alive entities |
-| `get_entity(id)` | `Object` | Single entity by ID |
-| `reset_simulation(seed, agents)` | `void` | Reset deterministically |
-| `serialize_entity_summary(e)` | `Dictionary` | Lightweight entity dict |
-| `serialize_entity_full(e)` | `Dictionary` | Full entity dict |
-
-### Optional methods
-
-`get_invariant_entities() -> Array` — Return pre-serialized entity dicts for invariant checks. Recommended: decouples invariant field names from your entity class.
-
-See `examples/example_adapter.gd` for a fully-commented template.
-
-## Generic node discovery (no adapter)
-
-Without an adapter, the harness looks for your simulation engine at these node paths (in order):
-
-- `/root/SimulationEngine`
-- `/root/SimEngine`
-- `/root/Simulation`
-- `/root/GameManager`
-- `/root/World`
-
-The engine node must implement one of: `process_single_tick()`, `_process_tick()`, or `step()`.
-
-Entity data is accessed via `/root/EntityManager`. The manager must implement `get_all_entities() -> Array`.
-
-## Running Tests
+### 1. Copy the template
 
 ```bash
-pip install -r requirements.txt
-python -m pytest tests/ -v
+cp Godot-Rust-MCP/examples/example_adapter.gd \
+   your-project/addons/harness/myproject_adapter.gd
 ```
 
-## Smoke Test (requires live Godot)
+### 2. Fill in the blanks
 
-```bash
-godot --path /path/to/project --headless &
-sleep 5
-python examples/smoke_test.py
-kill %1
+```gdscript
+extends Node
+
+func get_engine():
+    return get_node_or_null("/root/Main").sim_engine
+
+func process_ticks(n: int) -> void:
+    get_engine().advance_ticks(n)
+
+func get_current_tick() -> int:
+    return get_engine().current_tick
+
+func get_alive_entities() -> Array:
+    return get_node_or_null("/root/Main").entity_manager.get_alive_entities()
+
+func get_alive_count() -> int:
+    return get_alive_entities().size()
+
+func get_entity(id: int):
+    return get_node_or_null("/root/Main").entity_manager.get_entity(id)
+
+func reset_simulation(seed: int, agents: int) -> void:
+    get_engine().init_with_seed(seed)
+
+func serialize_entity_summary(e) -> Dictionary:
+    return {"id": e.id, "is_alive": e.is_alive, "name": e.name, "health": e.health}
+
+func serialize_entity_full(e) -> Dictionary:
+    var d = serialize_entity_summary(e)
+    d["needs"] = {"hunger": e.hunger, "energy": e.energy}
+    d["emotions"] = e.emotions.duplicate()
+    return d
 ```
+
+### 3. Restart Godot headless
+
+The harness auto-discovers any `*_adapter.gd` file in `addons/harness/`. No configuration needed.
+
+See `examples/example_adapter.gd` for a fully-commented template with all available methods.
+
+---
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PROJECT_ROOT` | `.` | Root of the Rust/Godot project |
+| `PROJECT_ROOT` | `.` | Root of your Godot+Rust project |
 | `GODOT_BIN` | `godot` | Path to Godot 4.x binary |
 
-## How It Works (Godot side)
+---
 
-`harness_server.gd` activates only when:
-- Godot is launched with `--headless`, OR
-- The `--harness` command-line flag is present
+## Zero Impact on Your Game
 
-In normal gameplay (F5), the harness does nothing — zero performance impact.
+The harness addon **only activates** when Godot runs with `--headless` or `--harness` flags. During normal gameplay (F5, exported builds), it does absolutely nothing — no overhead, no side effects.
 
-The server uses Godot's built-in `TCPServer` + `WebSocketPeer` to accept connections and process JSON-RPC 2.0 messages every frame in `_process()`.
+---
+
+## Running the Plugin's Own Tests
+
+```bash
+cd Godot-Rust-MCP
+pip install -r requirements.txt
+python -m pytest tests/ -v    # 54 tests
+```
+
+## Smoke Test (against your Godot project)
+
+```bash
+godot --path /path/to/your/project --headless &
+sleep 5
+python Godot-Rust-MCP/examples/smoke_test.py
+kill %1
+```
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
