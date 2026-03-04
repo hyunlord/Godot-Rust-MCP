@@ -22,6 +22,17 @@ func _ready() -> void:
 	invariants.name = "HarnessInvariants"
 	add_child(invariants)
 
+	# Auto-load project-specific adapter if present (e.g. worldsim_adapter.gd).
+	# The adapter bridges harness generic interface to project-specific APIs.
+	const ADAPTER_PATH := "res://addons/harness/worldsim_adapter.gd"
+	if ResourceLoader.exists(ADAPTER_PATH):
+		var adapter = load(ADAPTER_PATH).new()
+		adapter.name = "WorldSimAdapter"
+		add_child(adapter)
+		_router.set_adapter(adapter)
+		invariants.set_adapter(adapter)
+		print("[Harness] WorldSim adapter loaded")
+
 	_tcp_server = TCPServer.new()
 	var err: int = _tcp_server.listen(PORT)
 	if err != OK:

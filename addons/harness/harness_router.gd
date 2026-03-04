@@ -9,6 +9,11 @@ const ENGINE_PATHS: Array = ["/root/SimulationEngine", "/root/SimEngine", "/root
 
 var _tick_counter: int = 0
 var _engine = null  # Lazily resolved SimulationEngine reference
+var _adapter = null  # Optional project-specific adapter
+
+
+func set_adapter(adapter) -> void:
+	_adapter = adapter
 
 
 func execute(method: String, params: Dictionary) -> Dictionary:
@@ -39,6 +44,8 @@ func _err(code: int, message: String) -> Dictionary:
 
 
 func _get_engine():
+	if _adapter != null:
+		return _adapter.get_engine()
 	if _engine != null and is_instance_valid(_engine):
 		return _engine
 	for candidate in ENGINE_PATHS:
@@ -67,6 +74,8 @@ func _resolve_tick_method(engine) -> String:
 
 
 func _get_entity_manager():
+	if _adapter != null:
+		return _adapter.get_entity_manager()
 	return get_node_or_null("/root/EntityManager")
 
 
@@ -89,6 +98,14 @@ func _cmd_ping(_params: Dictionary) -> Dictionary:
 
 func _cmd_tick(params: Dictionary) -> Dictionary:
 	var n: int = clampi(params.get("n", 1), 1, 100000)
+
+	if _adapter != null:
+		var t_start: int = Time.get_ticks_usec()
+		_adapter.process_ticks(n)
+		_tick_counter += n
+		var elapsed_ms: float = (Time.get_ticks_usec() - t_start) / 1000.0
+		return _ok({"ticks_run": n, "tick_now": _tick_counter, "elapsed_ms": elapsed_ms, "alive": _count_alive()})
+
 	var engine = _get_engine()
 	if engine == null:
 		return _err(-32000,
@@ -115,6 +132,21 @@ func _cmd_tick(params: Dictionary) -> Dictionary:
 
 
 func _cmd_snapshot(_params: Dictionary) -> Dictionary:
+	if _adapter != null:
+		var alive: Array = _adapter.get_alive_entities()
+		var alive_count: int = alive.size()
+		var cap: int = min(alive_count, 200)
+		var entities: Array = []
+		for i in range(cap):
+			entities.append(_adapter.serialize_entity_summary(alive[i]))
+		return _ok({
+			"tick": _tick_counter,
+			"total_entities": alive_count,
+			"alive": alive_count,
+			"entities": entities,
+			"truncated": alive_count > 200,
+		})
+
 	var mgr = _get_entity_manager()
 	var entities: Array = []
 	var total: int = 0
@@ -154,6 +186,12 @@ func _cmd_query(params: Dictionary) -> Dictionary:
 	var target_id: int = params.get("id", -1)
 
 	if query_type == "entity":
+		if _adapter != null:
+			var entity = _adapter.get_entity(target_id)
+			if entity == null:
+				return _err(-32602, "Entity not found: id=%d" % target_id)
+			return _ok(_adapter.serialize_entity_full(entity))
+
 		var mgr = _get_entity_manager()
 		if mgr == null:
 			return _err(-32000, "EntityManager not found at /root/EntityManager")
@@ -237,49 +275,64 @@ func _cmd_invariant(params: Dictionary) -> Dictionary:
 
 
 func _cmd_reset(params: Dictionary) -> Dictionary:
-	var seed: int = params.get("seed", 42)
+	var rng_seed: int = params.get("seed", 42)
 	var agents: int = params.get("agents", 50)
-	var engine = _get_engine()
 
+	if _adapter != null:
+		_adapter.reset_simulation(rng_seed, agents)
+		_tick_counter = 0
+		return _ok({"seed": rng_seed, "agents": agents, "tick": 0})
+
+	var engine = _get_engine()
 	if engine == null:
 		return _err(-32000,
 			"SimulationEngine not found. Cannot reset. Tried: %s." % ", ".join(ENGINE_PATHS))
 
 	if engine.has_method("reset"):
-		engine.reset(seed, agents)
+		engine.reset(rng_seed, agents)
 	elif engine.has_method("reset_simulation"):
-		engine.reset_simulation(seed, agents)
+		engine.reset_simulation(rng_seed, agents)
 
 	_tick_counter = 0
 	_engine = null  # Re-resolve after reset in case scene changes
 
-	return _ok({"seed": seed, "agents": agents, "tick": 0})
+	return _ok({"seed": rng_seed, "agents": agents, "tick": 0})
 
 
 func _cmd_bench(params: Dictionary) -> Dictionary:
 	var n: int = clampi(params.get("n", 100), 1, 100000)
 	var warmup: int = clampi(params.get("warmup", 10), 0, 10000)
-	var engine = _get_engine()
 
-	if engine == null:
-		return _err(-32000, "SimulationEngine not found")
-
-	var tick_method: String = _resolve_tick_method(engine)
-	if tick_method == "":
-		return _err(-32000, "SimulationEngine has no tick method")
-
-	# Warmup (not measured)
-	for _i in range(warmup):
-		engine.call(tick_method)
-		_tick_counter += 1
-
-	# Measure each tick individually
 	var times: Array = []
-	for _i in range(n):
-		var t_start: int = Time.get_ticks_usec()
-		engine.call(tick_method)
-		_tick_counter += 1
-		times.append((Time.get_ticks_usec() - t_start) / 1000.0)  # ms
+
+	if _adapter != null:
+		# Warmup (not measured)
+		if warmup > 0:
+			_adapter.process_ticks(warmup)
+			_tick_counter += warmup
+		# Measure each tick individually
+		for _i in range(n):
+			var t_start: int = Time.get_ticks_usec()
+			_adapter.process_ticks(1)
+			_tick_counter += 1
+			times.append((Time.get_ticks_usec() - t_start) / 1000.0)
+	else:
+		var engine = _get_engine()
+		if engine == null:
+			return _err(-32000, "SimulationEngine not found")
+		var tick_method: String = _resolve_tick_method(engine)
+		if tick_method == "":
+			return _err(-32000, "SimulationEngine has no tick method")
+		# Warmup (not measured)
+		for _i in range(warmup):
+			engine.call(tick_method)
+			_tick_counter += 1
+		# Measure each tick individually
+		for _i in range(n):
+			var t_start: int = Time.get_ticks_usec()
+			engine.call(tick_method)
+			_tick_counter += 1
+			times.append((Time.get_ticks_usec() - t_start) / 1000.0)  # ms
 
 	times.sort()
 
