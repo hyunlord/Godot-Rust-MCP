@@ -167,10 +167,10 @@ _register("FIELDNAME_CONDITION", _check_FIELDNAME_CONDITION)
 ### addons/harness/plugin.cfg
 ```ini
 [plugin]
-name="Godot Rust Harness"
-description="WebSocket server for AI-assisted runtime verification"
-author="WorldSim"
-version="0.1.0"
+name="Harness"
+description="MCP-compatible WebSocket harness for AI-assisted Godot runtime verification"
+author="godot-rust-harness"
+version="1.0.0"
 script="harness_server.gd"
 ```
 

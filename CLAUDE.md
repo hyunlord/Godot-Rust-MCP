@@ -79,7 +79,8 @@ godot-rust-harness/
 │   └── test_invariants.py             ← invariant logic tests (mock)
 │
 ├── examples/
-│   └── smoke_test.py                  ← end-to-end smoke test script
+│   ├── smoke_test.py                  ← end-to-end smoke test script
+│   └── example_adapter.gd            ← adapter template (copy to your project)
 │
 └── PROGRESS.md                        ← work log (append-only)
 ```
@@ -196,7 +197,7 @@ Gate MUST pass. No exceptions. If gate fails, fix before proceeding.
 
 1. **Putting game logic in this repo** — this is a dev tool, not a game
 2. **Adding localization/i18n** — no user-facing text exists
-3. **Hardcoding WorldSim-specific paths** — this plugin must be generic for any Godot+Rust project
+3. **Hardcoding project-specific paths** — this plugin must be generic for any Godot+Rust project; put project-specific code in your own `*_adapter.gd` inside your project's copy of `addons/harness/`
 4. **Skipping type hints in Python** — every function signature needs types
 5. **Using `Task` tool for code changes** — ALWAYS dispatch via `ask_codex`
 6. **Skipping PROGRESS.md** — log BEFORE coding, not after

@@ -22,16 +22,19 @@ func _ready() -> void:
 	invariants.name = "HarnessInvariants"
 	add_child(invariants)
 
-	# Auto-load project-specific adapter if present (e.g. worldsim_adapter.gd).
-	# The adapter bridges harness generic interface to project-specific APIs.
-	const ADAPTER_PATH := "res://addons/harness/worldsim_adapter.gd"
-	if ResourceLoader.exists(ADAPTER_PATH):
-		var adapter = load(ADAPTER_PATH).new()
-		adapter.name = "WorldSimAdapter"
+	# Auto-discover project-specific adapter.
+	# Convention: any file matching res://addons/harness/*_adapter.gd
+	# The adapter is loaded and injected into router + invariants.
+	var adapter_script := _find_adapter()
+	if adapter_script != null:
+		var adapter: Node = adapter_script.new()
+		adapter.name = "HarnessAdapter"
 		add_child(adapter)
 		_router.set_adapter(adapter)
 		invariants.set_adapter(adapter)
-		print("[Harness] WorldSim adapter loaded")
+		print("[Harness] Adapter loaded: %s" % adapter_script.resource_path)
+	else:
+		print("[Harness] No adapter found — using generic node discovery")
 
 	_tcp_server = TCPServer.new()
 	var err: int = _tcp_server.listen(PORT)
@@ -117,6 +120,21 @@ func _error_response(req_id, code: int, message: String) -> String:
 		},
 	}
 	return JSON.stringify(response)
+
+
+func _find_adapter() -> GDScript:
+	var dir := DirAccess.open("res://addons/harness/")
+	if dir == null:
+		return null
+	dir.list_dir_begin()
+	var file_name: String = dir.get_next()
+	while file_name != "":
+		if file_name.ends_with("_adapter.gd") and file_name != "example_adapter.gd":
+			var path := "res://addons/harness/%s" % file_name
+			if ResourceLoader.exists(path):
+				return load(path) as GDScript
+		file_name = dir.get_next()
+	return null
 
 
 func _should_start() -> bool:

@@ -145,9 +145,55 @@ verify(package="my_crate", seed=42, agents=50, ticks=100)
 # → {"passed": true, "failed_at": null, "steps": {...}}
 ```
 
-## Integration with SimulationEngine
+## Writing an Adapter
 
-The harness looks for your simulation engine at these node paths (in order):
+An adapter bridges your project's specific API to the harness generic interface. Without an adapter, the harness uses generic node discovery. With an adapter, you have full control.
+
+### Quick start
+
+1. Copy the template:
+   ```bash
+   cp examples/example_adapter.gd /path/to/your/project/addons/harness/myproject_adapter.gd
+   ```
+
+2. Fill in the method bodies to match your project's API:
+   ```gdscript
+   func get_engine() -> Object:
+       return get_node_or_null("/root/SimulationEngine")
+
+   func process_ticks(n: int) -> void:
+       for i in range(n):
+           get_engine().step()
+   ```
+
+3. Restart Godot headless — the harness auto-discovers any `*_adapter.gd` file in `addons/harness/`.
+
+The file `example_adapter.gd` is deliberately excluded from auto-discovery. Only files named `*_adapter.gd` (other than `example_adapter.gd`) are loaded.
+
+### Required methods
+
+| Method | Return | Purpose |
+|--------|--------|---------|
+| `get_engine()` | `Object` | Return simulation engine node |
+| `get_entity_manager()` | `Object` | Return entity manager node |
+| `process_ticks(n)` | `void` | Advance N ticks |
+| `get_current_tick()` | `int` | Current tick number |
+| `get_alive_entities()` | `Array` | All alive entity objects |
+| `get_alive_count()` | `int` | Count of alive entities |
+| `get_entity(id)` | `Object` | Single entity by ID |
+| `reset_simulation(seed, agents)` | `void` | Reset deterministically |
+| `serialize_entity_summary(e)` | `Dictionary` | Lightweight entity dict |
+| `serialize_entity_full(e)` | `Dictionary` | Full entity dict |
+
+### Optional methods
+
+`get_invariant_entities() -> Array` — Return pre-serialized entity dicts for invariant checks. Recommended: decouples invariant field names from your entity class.
+
+See `examples/example_adapter.gd` for a fully-commented template.
+
+## Generic node discovery (no adapter)
+
+Without an adapter, the harness looks for your simulation engine at these node paths (in order):
 
 - `/root/SimulationEngine`
 - `/root/SimEngine`
@@ -155,11 +201,7 @@ The harness looks for your simulation engine at these node paths (in order):
 - `/root/GameManager`
 - `/root/World`
 
-The engine node must implement one of these tick methods:
-
-- `process_single_tick()`
-- `_process_tick()`
-- `step()`
+The engine node must implement one of: `process_single_tick()`, `_process_tick()`, or `step()`.
 
 Entity data is accessed via `/root/EntityManager`. The manager must implement `get_all_entities() -> Array`.
 
