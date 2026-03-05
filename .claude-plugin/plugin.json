@@ -1,11 +1,11 @@
 {
   "name": "godot-rust-harness",
-  "version": "1.0.0",
-  "description": "Runtime verification for Godot+Rust projects. Launch Godot headless, advance ticks, query entities, run invariant checks, benchmark performance — all from Claude Code.",
+  "version": "2.0.0",
+  "description": "Complete Godot+Rust development toolkit. 30 tools: build/verify, code analysis, project scanning, GDScript-to-Rust migration, performance optimization, gdext pattern checking, error diagnostics — all from Claude Code.",
   "author": {
     "name": "hyunlord"
   },
   "repository": "https://github.com/hyunlord/Godot-Rust-MCP",
   "license": "MIT",
-  "keywords": ["godot", "rust", "mcp", "testing", "verification", "simulation"]
+  "keywords": ["godot", "rust", "gdext", "mcp", "testing", "verification", "migration", "performance", "code-analysis"]
 }

@@ -1,17 +1,35 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "godot-rust-harness",
-  "version": "1.0.0",
-  "description": "Runtime verification for Godot+Rust projects. Launch Godot headless, advance ticks, query entities, run invariant checks, benchmark performance.",
+  "version": "2.0.0",
+  "description": "Complete development toolkit for Godot+Rust projects. 30 tools across 7 domains: build/verify, code analysis, project structure, GDScript-to-Rust migration, performance optimization, gdext patterns, and debug diagnostics.",
   "owner": {
     "name": "hyunlord"
   },
   "plugins": [
     {
       "name": "godot-rust-harness",
-      "description": "MCP server + Godot addon for AI-assisted runtime verification of Godot+Rust simulation projects. 16 tools including verify(), tick, snapshot, invariant checks, and benchmarking.",
-      "source": ".",
-      "category": "development"
+      "description": "MCP server + Godot addon for AI-assisted Godot+Rust development. 30 tools: runtime verification, code analysis, project scanning, GDScript-to-Rust migration, performance suggestions, gdext pattern checking, and error diagnostics.",
+      "source": "./",
+      "category": "development",
+      "version": "2.0.0",
+      "author": {
+        "name": "hyunlord"
+      },
+      "keywords": [
+        "godot",
+        "rust",
+        "gdext",
+        "mcp",
+        "testing",
+        "verification",
+        "migration",
+        "performance",
+        "code-analysis"
+      ],
+      "homepage": "https://github.com/hyunlord/Godot-Rust-MCP",
+      "repository": "https://github.com/hyunlord/Godot-Rust-MCP",
+      "license": "MIT"
     }
   ]
 }
