@@ -2,7 +2,7 @@
   "mcpServers": {
     "godot-rust-harness": {
       "command": "uv",
-      "args": ["run", "--with", "mcp[cli]", "--with", "websockets", "python", "-m", "src.server"],
+      "args": ["run", "--python", "3.13", "--with", "mcp[cli]", "--with", "websockets", "python", "-m", "src.server"],
       "cwd": "${CLAUDE_PLUGIN_ROOT}",
       "env": {
         "PROJECT_ROOT": "."
