@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "godot-rust-marketplace",
+  "name": "hyunlord-godot-tools",
   "version": "2.0.0",
   "description": "Complete development toolkit for Godot+Rust projects. 30 tools across 7 domains: build/verify, code analysis, project structure, GDScript-to-Rust migration, performance optimization, gdext patterns, and debug diagnostics.",
   "owner": {
