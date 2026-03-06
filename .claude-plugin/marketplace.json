@@ -10,7 +10,10 @@
     {
       "name": "godot-rust-harness",
       "description": "MCP server + Godot addon for AI-assisted Godot+Rust development. 30 tools: runtime verification, code analysis, project scanning, GDScript-to-Rust migration, performance suggestions, gdext pattern checking, and error diagnostics.",
-      "source": "./",
+      "source": {
+        "source": "github",
+        "repo": "hyunlord/Godot-Rust-MCP"
+      },
       "category": "development",
       "version": "2.0.0",
       "author": {
